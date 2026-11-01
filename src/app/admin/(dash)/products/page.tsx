@@ -4,19 +4,14 @@ import ProductImage from "@/components/ProductImage";
 import Toggle from "@/components/admin/Toggle";
 import { PageHead } from "@/components/admin/ui";
 import { toggleProduct } from "@/app/admin/actions";
-import { db } from "@/lib/db";
 import { formatPrice } from "@/lib/format";
-import { listAllProducts } from "@/lib/store";
+import { listAllCategories, listAllProducts } from "@/lib/store";
 
 export const metadata: Metadata = { title: "Products" };
 
 export default async function ProductsPage({ searchParams }: { searchParams: Promise<{ q?: string; c?: string }> }) {
   const { q = "", c = "" } = await searchParams;
-  const sql = await db();
-  const [all, categories] = await Promise.all([
-    listAllProducts(),
-    sql<{ slug: string; name: string }[]>`select slug, name from categories order by sort, slug`,
-  ]);
+  const [all, categories] = await Promise.all([listAllProducts(), listAllCategories()]);
   const term = q.trim().toLowerCase();
   const products = all.filter(
     (p) => (!c || p.category === c) && (!term || `${p.name} ${p.slug}`.toLowerCase().includes(term)),

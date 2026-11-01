@@ -5,7 +5,7 @@ import SettingsForm from "@/components/admin/SettingsForm";
 import { PageHead } from "@/components/admin/ui";
 import { addAdmin, removeAdmin } from "@/app/admin/actions";
 import { ownerEmails, requireAdminPage } from "@/lib/auth";
-import { db } from "@/lib/db";
+import { COL, db } from "@/lib/db";
 import { settingsGroups } from "@/lib/settings-fields";
 import { loadSettings } from "@/lib/store";
 
@@ -13,20 +13,20 @@ export const metadata: Metadata = { title: "Settings" };
 
 export default async function SettingsPage() {
   const me = await requireAdminPage();
-  const sql = await db();
-  const [settings, admins] = await Promise.all([
-    loadSettings(),
-    sql<{ email: string; added_by: string | null }[]>`select email, added_by from admins order by added_at`,
-  ]);
+  const [settings, adminsSnap] = await Promise.all([loadSettings(), (await db()).collection(COL.admins).get()]);
+  const admins = adminsSnap.docs.map((d) => ({
+    email: String(d.get("email")),
+    added_by: (d.get("addedBy") as string | undefined) ?? null,
+  }));
   const owners = ownerEmails();
   const integrations = [
-    { name: "Database", ok: true, hint: "Connected" },
+    { name: "Firestore database", ok: true, hint: "Connected" },
     {
       name: "Photo storage",
-      ok: Boolean(process.env.BLOB_READ_WRITE_TOKEN),
-      hint: process.env.BLOB_READ_WRITE_TOKEN
-        ? "Vercel Blob"
-        : "Photos are stored in the database. Add Vercel Blob for faster loading.",
+      ok: Boolean(process.env.FIREBASE_STORAGE_BUCKET),
+      hint: process.env.FIREBASE_STORAGE_BUCKET
+        ? `Firebase Storage (${process.env.FIREBASE_STORAGE_BUCKET})`
+        : "Photos are stored in Firestore (max ~1 MB each). Set FIREBASE_STORAGE_BUCKET for Firebase Storage.",
     },
     {
       name: "Telegram alerts",

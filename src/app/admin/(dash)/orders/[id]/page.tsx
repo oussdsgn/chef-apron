@@ -4,9 +4,9 @@ import ActionForm from "@/components/admin/ActionForm";
 import ConfirmButton from "@/components/admin/ConfirmButton";
 import { PageHead, StatusPill, formatDate } from "@/components/admin/ui";
 import { deleteOrder, saveOrderNote } from "@/app/admin/actions";
-import { db } from "@/lib/db";
+import { COL, db } from "@/lib/db";
 import { formatPrice } from "@/lib/format";
-import { toOrder, type OrderRowType } from "@/lib/store";
+import { toOrder } from "@/lib/store";
 import StatusButtons from "./StatusButtons";
 import PrintButton from "./PrintButton";
 
@@ -18,10 +18,10 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
 
 export default async function OrderPage({ params }: Params) {
   const { id } = await params;
-  const sql = await db();
-  const [row] = await sql<OrderRowType[]>`select * from orders where id = ${id}`;
-  if (!row) notFound();
-  const o = toOrder(row);
+  if (!/^[\w-]{1,128}$/.test(id)) notFound();
+  const doc = await (await db()).collection(COL.orders).doc(id).get();
+  if (!doc.exists) notFound();
+  const o = toOrder(doc);
   const c = o.customer;
   const intl = c.phone.replace(/^0/, "213");
 

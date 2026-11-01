@@ -19,7 +19,7 @@ export type ColorOption = {
 };
 
 export type Product = {
-  id: number;
+  id: string;
   slug: string;
   name: string;
   category: CategorySlug;

@@ -1,9 +1,11 @@
 import "server-only";
-import type { NextAuthOptions } from "next-auth";
-import { getServerSession } from "next-auth";
-import GoogleProvider from "next-auth/providers/google";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { db } from "./db";
+import { COL, db, emailId } from "./db";
+import { adminAuth } from "./firebase-admin";
+
+export const SESSION_COOKIE = "apron_session";
+export const SESSION_DAYS = 7;
 
 /** Emails in ADMIN_EMAILS (comma-separated) are always admins and can add others from the dashboard. */
 export function ownerEmails() {
@@ -17,37 +19,28 @@ export async function isAdminEmail(email?: string | null) {
   if (!email) return false;
   const e = email.toLowerCase();
   if (ownerEmails().includes(e)) return true;
-  const sql = await db();
-  const [row] = await sql`select 1 from admins where email = ${e}`;
-  return Boolean(row);
+  const doc = await (await db()).collection(COL.admins).doc(emailId(e)).get();
+  return doc.exists;
 }
-
-export const authOptions: NextAuthOptions = {
-  secret: process.env.NEXTAUTH_SECRET ?? process.env.AUTH_SECRET,
-  providers: [
-    GoogleProvider({
-      clientId: process.env.GOOGLE_CLIENT_ID ?? "",
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET ?? "",
-    }),
-  ],
-  session: { strategy: "jwt", maxAge: 7 * 24 * 60 * 60 },
-  pages: { signIn: "/admin/login", error: "/admin/login" },
-  callbacks: {
-    async signIn({ user, profile }) {
-      // Google marks whether the address is verified; refuse unverified ones.
-      const verified = (profile as { email_verified?: boolean } | undefined)?.email_verified;
-      if (verified === false) return false;
-      return isAdminEmail(user.email);
-    },
-  },
-};
 
 /** Returns the signed-in admin, or null. Re-checks the admin list every time so removals apply immediately. */
 export async function getAdmin() {
-  const session = await getServerSession(authOptions);
-  const email = session?.user?.email;
-  if (!email || !(await isAdminEmail(email))) return null;
-  return { email: email.toLowerCase(), name: session.user?.name ?? email, image: session.user?.image ?? undefined };
+  const cookie = (await cookies()).get(SESSION_COOKIE)?.value;
+  if (!cookie) return null;
+  try {
+    // true = also reject sessions revoked by signing out
+    const claims = await adminAuth().verifySessionCookie(cookie, true);
+    const email = claims.email?.toLowerCase();
+    if (!email || !claims.email_verified || !(await isAdminEmail(email))) return null;
+    return {
+      email,
+      name: (claims.name as string | undefined) ?? email,
+      image: (claims.picture as string | undefined) ?? undefined,
+      uid: claims.uid,
+    };
+  } catch {
+    return null;
+  }
 }
 
 /** For pages: sends visitors who aren't admins to the login page. */

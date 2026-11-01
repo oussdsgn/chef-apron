@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { PageHead, StatusPill, formatDate } from "@/components/admin/ui";
-import { db } from "@/lib/db";
+import { COL, db } from "@/lib/db";
 import { formatPrice } from "@/lib/format";
-import { toOrder, type OrderRowType } from "@/lib/store";
+import { toOrder } from "@/lib/store";
 import { ORDER_STATUSES, type OrderStatus } from "@/lib/types";
 
 export const metadata: Metadata = { title: "Orders" };
@@ -19,20 +19,27 @@ export default async function OrdersPage({
   const status = ORDER_STATUSES.some((s) => s.value === sp.status) ? (sp.status as OrderStatus) : undefined;
   const q = (sp.q ?? "").trim().slice(0, 100);
   const page = Math.max(1, Number(sp.page) || 1);
-  const sql = await db();
+  const orders$ = (await db()).collection(COL.orders);
 
-  const like = `%${q}%`;
-  const where = sql`
-    where (${status ?? null}::text is null or status = ${status ?? null})
-      and (${q} = '' or id ilike ${like} or customer->>'name' ilike ${like} or customer->>'phone' ilike ${like}
-           or customer->>'wilaya' ilike ${like} or customer->>'commune' ilike ${like})`;
-
-  const [rows, [{ total }], counts] = await Promise.all([
-    sql<OrderRowType[]>`select * from orders ${where} order by created_at desc limit ${PAGE_SIZE} offset ${(page - 1) * PAGE_SIZE}`,
-    sql<{ total: number }[]>`select count(*)::int as total from orders ${where}`,
-    sql<{ status: string; count: number }[]>`select status, count(*)::int as count from orders group by status`,
+  // Single-field queries only, so no composite indexes need to be created in Firebase.
+  const [snap, ...statusCounts] = await Promise.all([
+    status ? orders$.where("status", "==", status).get() : orders$.orderBy("createdAt", "desc").limit(2000).get(),
+    ...ORDER_STATUSES.map((s) => orders$.where("status", "==", s.value).count().get()),
   ]);
-  const orders = rows.map(toOrder);
+  const term = q.toLowerCase();
+  const matching = snap.docs
+    .map(toOrder)
+    .filter(
+      (o) =>
+        !term ||
+        [o.id, o.customer.name, o.customer.phone, o.customer.wilaya, o.customer.commune].some((v) =>
+          String(v ?? "").toLowerCase().includes(term),
+        ),
+    )
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  const total = matching.length;
+  const orders = matching.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const counts = ORDER_STATUSES.map((s, i) => ({ status: s.value, count: statusCounts[i].data().count }));
   const countOf = (s?: string) =>
     s ? (counts.find((c) => c.status === s)?.count ?? 0) : counts.reduce((n, c) => n + c.count, 0);
   const href = (params: Record<string, string | undefined>) => {

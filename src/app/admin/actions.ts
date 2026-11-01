@@ -1,13 +1,14 @@
 "use server";
 
+import { FieldValue, Timestamp } from "firebase-admin/firestore";
 import { revalidatePath, revalidateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import { ownerEmails, requireAdmin } from "@/lib/auth";
-import { db } from "@/lib/db";
+import { COL, db, emailId } from "@/lib/db";
 import { slugify } from "@/lib/format";
 import { contentGroups, settingsGroups, type SectionKey } from "@/lib/settings-fields";
 import { CATALOG_TAG, SETTINGS_TAG, loadSettings } from "@/lib/store";
-import { ORDER_STATUSES, type ColorOption, type OrderStatus, type Settings } from "@/lib/types";
+import { ORDER_STATUSES, type ColorOption, type OrderStatus } from "@/lib/types";
 import { saveImage } from "@/lib/uploads";
 
 export type ActionState = { ok: boolean; message: string } | null;
@@ -19,6 +20,8 @@ const int = (fd: FormData, key: string) => {
   const n = Number(raw);
   return Number.isFinite(n) ? Math.round(n) : NaN;
 };
+/** Document ids come from the browser: reject anything that could address another path. */
+const safeId = (id: unknown) => typeof id === "string" && /^[\w-]{1,128}$/.test(id);
 
 function refreshStore(...tags: string[]) {
   for (const t of tags) revalidateTag(t);
@@ -29,24 +32,24 @@ function refreshStore(...tags: string[]) {
 
 export async function setOrderStatus(id: string, status: OrderStatus) {
   await requireAdmin();
-  if (!ORDER_STATUSES.some((s) => s.value === status)) throw new Error("Unknown status");
-  const sql = await db();
-  await sql`update orders set status = ${status} where id = ${id}`;
+  if (!safeId(id) || !ORDER_STATUSES.some((s) => s.value === status)) throw new Error("Invalid request");
+  await (await db()).collection(COL.orders).doc(id).update({ status, updatedAt: Timestamp.now() });
   revalidatePath("/admin", "layout");
 }
 
 export async function saveOrderNote(_prev: ActionState, fd: FormData): Promise<ActionState> {
   await requireAdmin();
-  const sql = await db();
-  await sql`update orders set admin_note = ${str(fd, "note", 2000)} where id = ${str(fd, "id")}`;
+  const id = str(fd, "id");
+  if (!safeId(id)) return { ok: false, message: "Invalid order." };
+  await (await db()).collection(COL.orders).doc(id).update({ adminNote: str(fd, "note", 2000) });
   revalidatePath("/admin", "layout");
   return { ok: true, message: "Note saved" };
 }
 
 export async function deleteOrder(id: string) {
   await requireAdmin();
-  const sql = await db();
-  await sql`delete from orders where id = ${id}`;
+  if (!safeId(id)) throw new Error("Invalid request");
+  await (await db()).collection(COL.orders).doc(id).delete();
   revalidatePath("/admin", "layout");
   redirect("/admin/orders");
 }
@@ -55,9 +58,11 @@ export async function deleteOrder(id: string) {
 
 export async function saveProduct(_prev: ActionState, fd: FormData): Promise<ActionState> {
   await requireAdmin();
-  const sql = await db();
+  const firestore = await db();
+  const products = firestore.collection(COL.products);
 
-  const id = int(fd, "id");
+  const id = str(fd, "id");
+  if (id && !safeId(id)) return { ok: false, message: "Invalid product." };
   const name = str(fd, "name", 120);
   const slug = slugify(str(fd, "slug") || name);
   const category = str(fd, "category");
@@ -70,8 +75,8 @@ export async function saveProduct(_prev: ActionState, fd: FormData): Promise<Act
   if (price === null || Number.isNaN(price) || price < 0) return { ok: false, message: "Please enter a valid price." };
   if (compareAt !== null && (Number.isNaN(compareAt) || compareAt <= price))
     return { ok: false, message: "The “was” price must be higher than the price, or empty." };
-  const [cat] = await sql`select 1 from categories where slug = ${category}`;
-  if (!cat) return { ok: false, message: "Please choose a collection." };
+  if (!safeId(category) || !(await firestore.collection(COL.categories).doc(category).get()).exists)
+    return { ok: false, message: "Please choose a collection." };
 
   let colors: ColorOption[] = [];
   try {
@@ -79,7 +84,7 @@ export async function saveProduct(_prev: ActionState, fd: FormData): Promise<Act
       .map((c) => ({
         name: String(c.name ?? "").trim().slice(0, 40),
         hex: /^#[0-9a-f]{6}$/i.test(c.hex) ? c.hex : "#cccccc",
-        ...(c.image ? { image: String(c.image).slice(0, 500) } : {}),
+        ...(c.image ? { image: String(c.image).slice(0, 1000) } : {}),
       }))
       .filter((c) => c.name);
   } catch {
@@ -87,45 +92,45 @@ export async function saveProduct(_prev: ActionState, fd: FormData): Promise<Act
   }
   if (colors.length === 0) return { ok: false, message: "Add at least one color (e.g. “Default”)." };
 
-  const lines = (key: string) =>
-    str(fd, key, 10000)
-      .split(/\n|,/)
-      .map((l) => l.trim())
-      .filter(Boolean);
   const details = str(fd, "details", 10000)
     .split("\n")
     .map((l) => l.trim())
     .filter(Boolean);
-  const sizes = lines("sizes");
+  const sizes = str(fd, "sizes", 2000)
+    .split(/\n|,/)
+    .map((l) => l.trim())
+    .filter(Boolean);
+
+  const clash = await products.where("slug", "==", slug).get();
+  if (clash.docs.some((d) => d.id !== id)) return { ok: false, message: `Another product already uses the address “${slug}”.` };
 
   const values = {
     slug,
     name,
     category,
     price,
-    compare_at_price: compareAt,
+    compareAtPrice: compareAt,
     short: str(fd, "short", 300),
     description: str(fd, "description", 5000),
-    details: sql.json(details),
-    colors: sql.json(colors),
-    sizes: sizes.length ? sql.json(sizes) : null,
+    details,
+    colors,
+    sizes: sizes.length ? sizes : null,
     art: str(fd, "art") || "apron-bib",
-    image: str(fd, "image", 500) || null,
-    is_new: fd.get("isNew") === "on",
+    image: str(fd, "image", 1000) || null,
+    isNew: fd.get("isNew") === "on",
     active: fd.get("active") === "on",
-    in_stock: fd.get("inStock") === "on",
+    inStock: fd.get("inStock") === "on",
     sort,
+    updatedAt: Timestamp.now(),
   };
-
-  const [clash] = await sql`select id from products where slug = ${slug} and id <> ${id ?? -1}`;
-  if (clash) return { ok: false, message: `Another product already uses the address “${slug}”.` };
 
   let savedId = id;
   if (id) {
-    await sql`update products set ${sql(values)}, updated_at = now() where id = ${id}`;
+    const ref = products.doc(id);
+    if (!(await ref.get()).exists) return { ok: false, message: "This product no longer exists." };
+    await ref.set(values, { merge: true });
   } else {
-    const [row] = await sql<{ id: number }[]>`insert into products ${sql(values)} returning id`;
-    savedId = row.id;
+    savedId = (await products.add({ ...values, createdAt: Timestamp.now() })).id;
   }
   refreshStore(CATALOG_TAG);
   revalidatePath("/admin", "layout");
@@ -133,67 +138,87 @@ export async function saveProduct(_prev: ActionState, fd: FormData): Promise<Act
   return { ok: true, message: "Product saved" };
 }
 
-export async function toggleProduct(id: number, field: "active" | "in_stock" | "is_new") {
+const TOGGLES = { active: "active", in_stock: "inStock", is_new: "isNew" } as const;
+
+export async function toggleProduct(id: string, field: keyof typeof TOGGLES) {
   await requireAdmin();
-  // Arguments come from the browser: only allow these three columns.
-  if (!["active", "in_stock", "is_new"].includes(field) || !Number.isInteger(id)) throw new Error("Invalid request");
-  const sql = await db();
-  await sql`update products set ${sql(field)} = not ${sql(field)}, updated_at = now() where id = ${id}`;
+  // Arguments come from the browser: only allow these three fields.
+  if (!safeId(id) || !(field in TOGGLES)) throw new Error("Invalid request");
+  const key = TOGGLES[field];
+  const firestore = await db();
+  await firestore.runTransaction(async (tx) => {
+    const ref = firestore.collection(COL.products).doc(id);
+    const snap = await tx.get(ref);
+    if (!snap.exists) return;
+    const current = key === "isNew" ? Boolean(snap.get(key)) : snap.get(key) !== false;
+    tx.update(ref, { [key]: !current, updatedAt: Timestamp.now() });
+  });
   refreshStore(CATALOG_TAG);
   revalidatePath("/admin", "layout");
 }
 
-export async function deleteProduct(id: number) {
+export async function deleteProduct(id: string) {
   await requireAdmin();
-  const sql = await db();
-  await sql`delete from products where id = ${id}`;
+  if (!safeId(id)) throw new Error("Invalid request");
+  await (await db()).collection(COL.products).doc(id).delete();
   refreshStore(CATALOG_TAG);
   revalidatePath("/admin", "layout");
   redirect("/admin/products");
 }
 
-export async function duplicateProduct(id: number) {
+export async function duplicateProduct(id: string) {
   await requireAdmin();
-  const sql = await db();
-  const [row] = await sql<{ id: number }[]>`
-    insert into products (slug, name, category, price, compare_at_price, short, description, details, colors, sizes, art, image, is_new, active, in_stock, sort)
-    select slug || '-copy-' || substr(md5(random()::text), 1, 4), name || ' (copy)', category, price, compare_at_price, short,
-           description, details, colors, sizes, art, image, is_new, false, in_stock, sort
-    from products where id = ${id} returning id`;
+  if (!safeId(id)) throw new Error("Invalid request");
+  const products = (await db()).collection(COL.products);
+  const snap = await products.doc(id).get();
+  if (!snap.exists) throw new Error("Product not found");
+  const d = snap.data()!;
+  const copy = await products.add({
+    ...d,
+    slug: `${d.slug}-copy-${Math.random().toString(36).slice(2, 6)}`,
+    name: `${d.name} (copy)`,
+    active: false,
+    createdAt: Timestamp.now(),
+    updatedAt: Timestamp.now(),
+  });
   revalidatePath("/admin", "layout");
-  redirect(`/admin/products/${row.id}`);
+  redirect(`/admin/products/${copy.id}`);
 }
 
 // ---------------- Collections ----------------
 
 export async function saveCategory(_prev: ActionState, fd: FormData): Promise<ActionState> {
   await requireAdmin();
-  const sql = await db();
+  const firestore = await db();
+  const categories = firestore.collection(COL.categories);
   const original = str(fd, "original");
   const slug = slugify(str(fd, "slug") || str(fd, "name"));
   const name = str(fd, "name", 60);
   if (!name || !slug) return { ok: false, message: "Name is required." };
+  if (original && !safeId(original)) return { ok: false, message: "Invalid collection." };
   const values = {
-    slug,
     name,
     title: str(fd, "title", 120) || name,
     blurb: str(fd, "blurb", 500),
-    image: str(fd, "image", 500) || null,
+    image: str(fd, "image", 1000) || null,
     sort: int(fd, "sort") ?? 0,
   };
-  if (original) {
-    if (original !== slug) {
-      const [clash] = await sql`select 1 from categories where slug = ${slug}`;
-      if (clash) return { ok: false, message: `The address “${slug}” is already used.` };
-    }
-    await sql.begin(async (tx) => {
-      await tx`update categories set ${tx(values)} where slug = ${original}`;
-      if (original !== slug) await tx`update products set category = ${slug} where category = ${original}`;
-    });
+
+  if (original && original === slug) {
+    await categories.doc(slug).set(values, { merge: true });
   } else {
-    const [clash] = await sql`select 1 from categories where slug = ${slug}`;
-    if (clash) return { ok: false, message: `The address “${slug}” is already used.` };
-    await sql`insert into categories ${sql(values)}`;
+    if ((await categories.doc(slug).get()).exists) return { ok: false, message: `The address “${slug}” is already used.` };
+    if (original) {
+      // Renaming the address: move the collection and its products in one batch.
+      const batch = firestore.batch();
+      batch.set(categories.doc(slug), values);
+      batch.delete(categories.doc(original));
+      const items = await firestore.collection(COL.products).where("category", "==", original).get();
+      items.docs.forEach((d) => batch.update(d.ref, { category: slug }));
+      await batch.commit();
+    } else {
+      await categories.doc(slug).set(values);
+    }
   }
   refreshStore(CATALOG_TAG);
   revalidatePath("/admin", "layout");
@@ -202,10 +227,11 @@ export async function saveCategory(_prev: ActionState, fd: FormData): Promise<Ac
 
 export async function deleteCategory(slug: string): Promise<{ error?: string }> {
   await requireAdmin();
-  const sql = await db();
-  const [{ count }] = await sql<{ count: number }[]>`select count(*)::int as count from products where category = ${slug}`;
+  if (!safeId(slug)) return { error: "Invalid collection." };
+  const firestore = await db();
+  const count = (await firestore.collection(COL.products).where("category", "==", slug).count().get()).data().count;
   if (count > 0) return { error: `Move or delete the ${count} product(s) in this collection first.` };
-  await sql`delete from categories where slug = ${slug}`;
+  await firestore.collection(COL.categories).doc(slug).delete();
   refreshStore(CATALOG_TAG);
   revalidatePath("/admin", "layout");
   return {};
@@ -260,10 +286,7 @@ export async function saveSettings(_prev: ActionState, fd: FormData): Promise<Ac
     }
   }
 
-  const merged: Settings = { ...current, [section]: next };
-  const sql = await db();
-  await sql`insert into settings (key, value, updated_at) values ('site', ${sql.json(merged as never)}, now())
-            on conflict (key) do update set value = excluded.value, updated_at = now()`;
+  await (await db()).collection(COL.settings).doc("site").set({ [section]: next }, { merge: true });
   refreshStore(SETTINGS_TAG);
   revalidatePath("/admin", "layout");
   return { ok: true, message: `${group.title} saved` };
@@ -275,18 +298,20 @@ export async function addAdmin(_prev: ActionState, fd: FormData): Promise<Action
   const me = await requireAdmin();
   const email = str(fd, "email", 200).toLowerCase();
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return { ok: false, message: "Enter a valid Google email." };
-  const sql = await db();
-  await sql`insert into admins (email, added_by) values (${email}, ${me.email}) on conflict do nothing`;
+  await (await db())
+    .collection(COL.admins)
+    .doc(emailId(email))
+    .set({ email, addedBy: me.email, addedAt: FieldValue.serverTimestamp() });
   revalidatePath("/admin/settings");
   return { ok: true, message: `${email} can now sign in` };
 }
 
 export async function removeAdmin(email: string): Promise<{ error?: string }> {
   const me = await requireAdmin();
+  if (typeof email !== "string") return { error: "Invalid email." };
   if (email === me.email) return { error: "You can't remove yourself." };
   if (ownerEmails().includes(email)) return { error: "Owners are set in ADMIN_EMAILS on Vercel and can't be removed here." };
-  const sql = await db();
-  await sql`delete from admins where email = ${email}`;
+  await (await db()).collection(COL.admins).doc(emailId(email)).delete();
   revalidatePath("/admin/settings");
   return {};
 }
@@ -295,8 +320,8 @@ export async function removeAdmin(email: string): Promise<{ error?: string }> {
 
 export async function deleteSubscriber(email: string) {
   await requireAdmin();
-  const sql = await db();
-  await sql`delete from subscribers where email = ${email}`;
+  if (typeof email !== "string") throw new Error("Invalid request");
+  await (await db()).collection(COL.subscribers).doc(emailId(email)).delete();
   revalidatePath("/admin/subscribers");
 }
 

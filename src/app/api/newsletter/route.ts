@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { db } from "@/lib/db";
+import { COL, db, emailId } from "@/lib/db";
 
 export async function POST(req: Request) {
   let email = "";
@@ -14,8 +14,8 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Invalid email" }, { status: 400 });
   }
   try {
-    const sql = await db();
-    await sql`insert into subscribers (email) values (${email}) on conflict do nothing`;
+    const ref = (await db()).collection(COL.subscribers).doc(emailId(email));
+    if (!(await ref.get()).exists) await ref.set({ email, createdAt: new Date() });
   } catch (err) {
     console.error("Newsletter sign-up failed", err);
     return NextResponse.json({ error: "Please try again later." }, { status: 500 });

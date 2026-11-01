@@ -1,7 +1,7 @@
 # Apron
 
 Online store for **Apron** (chef's uniforms, aprons and kitchen utensils) with a built-in admin dashboard.
-Built with Next.js (App Router) and TypeScript, hosted on Vercel, with a Postgres database.
+Built with Next.js (App Router) and TypeScript, hosted on Vercel, with Firebase (Firestore + Google sign-in).
 Prices are in Algerian dinars (DA) and customers pay cash on delivery.
 
 ## What's included
@@ -25,57 +25,67 @@ Prices are in Algerian dinars (DA) and customers pay cash on delivery.
 
 Changes made in the dashboard go live on the store immediately.
 
-## Set up on Vercel
+## Set up
 
-### 1. Database
-In your Vercel project, open **Storage → Create Database → Neon (Postgres)** and connect it to the project.
-This adds `DATABASE_URL`. The tables and the starter catalog are created automatically on the first visit.
+### 1. Create the Firebase project
+1. Go to <https://console.firebase.google.com/> → **Add project** (e.g. “Apron”). Google Analytics is optional.
+2. **Build → Firestore Database → Create database**. Pick the location `europe-west` (closest to Algeria)
+   and **Start in production mode**. Then open the **Rules** tab, paste the contents of `firestore.rules` and publish.
+3. **Build → Authentication → Get started → Sign-in method → Google → Enable**, choose a support email, and save.
+4. **Authentication → Settings → Authorised domains → Add domain**: add your Vercel domain
+   (e.g. `apron.vercel.app`) and your own domain if you have one.
+5. **Project settings (⚙) → General → Your apps → Web (`</>`)**: register an app (e.g. “Apron web”).
+   Keep the `firebaseConfig` values that appear; you need `apiKey`, `authDomain`, `projectId` and `appId`.
+6. **Project settings → Service accounts → Generate new private key**. A JSON file downloads.
+   Keep it secret: it gives full access to your database.
 
-Optionally, also create a **Blob** store and connect it (adds `BLOB_READ_WRITE_TOKEN`) so product photos load from a CDN.
+The tables (“collections”) and the starter catalog are created automatically on the first visit.
 
-### 2. Google sign-in
-1. Go to <https://console.cloud.google.com/> and create a project, e.g. “Apron”.
-2. **APIs & Services → OAuth consent screen**: choose *External*, fill in the app name and your email, and save.
-   Then either **Publish app**, or add each admin's Gmail under *Test users*.
-3. **APIs & Services → Credentials → Create credentials → OAuth client ID**, type *Web application*.
-   Under **Authorized redirect URIs** add:
-   - `https://YOUR-DOMAIN/api/auth/callback/google`
-   - `http://localhost:3000/api/auth/callback/google` (for local development)
-4. Copy the **Client ID** and **Client secret**.
-
-### 3. Environment variables
-In **Vercel → Settings → Environment Variables**, add:
+### 2. Environment variables on Vercel
+In **Vercel → your project → Settings → Environment Variables**, add:
 
 | Name | Value |
 | --- | --- |
-| `GOOGLE_CLIENT_ID` | from step 2 |
-| `GOOGLE_CLIENT_SECRET` | from step 2 |
-| `NEXTAUTH_SECRET` | a random string: run `openssl rand -base64 32` |
-| `NEXTAUTH_URL` | your site address, e.g. `https://apron.dz` |
+| `FIREBASE_SERVICE_ACCOUNT` | the whole content of the JSON file from step 6 |
+| `NEXT_PUBLIC_FIREBASE_API_KEY` | `apiKey` from step 5 |
+| `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN` | `authDomain` from step 5 |
+| `NEXT_PUBLIC_FIREBASE_PROJECT_ID` | `projectId` from step 5 |
+| `NEXT_PUBLIC_FIREBASE_APP_ID` | `appId` from step 5 |
 | `ADMIN_EMAILS` | your Gmail address (several allowed, comma-separated) |
 
-Optional: `TELEGRAM_BOT_TOKEN` + `TELEGRAM_CHAT_ID` (get every order on Telegram), `ORDER_WEBHOOK_URL`.
-See `.env.example` for details.
+Optional:
+- `FIREBASE_STORAGE_BUCKET`: store photos in Firebase Storage instead of Firestore.
+  Storage needs the pay-as-you-go **Blaze** plan; its free allowance covers a small shop.
+  Enable it under **Build → Storage**, paste `storage.rules` into its Rules tab, and use the bucket name shown there
+  (e.g. `apron-12345.firebasestorage.app`).
+- `TELEGRAM_BOT_TOKEN` + `TELEGRAM_CHAT_ID`: get every order on Telegram. See `.env.example`.
+- `ORDER_WEBHOOK_URL`: also send each order to a webhook.
 
-### 4. Deploy
+### 3. Deploy
 Redeploy, then open `https://YOUR-DOMAIN/admin` and sign in with Google.
 
 ## Run locally
 
 ```bash
 npm install
-cp .env.example .env.local   # fill in DATABASE_URL and the Google values
+cp .env.example .env.local   # fill in the Firebase values
 npm run dev
 ```
 
 Tip: `vercel env pull .env.local` copies the variables from your Vercel project.
+For offline development you can also use the Firebase emulators: set `FIRESTORE_EMULATOR_HOST`,
+`FIREBASE_AUTH_EMULATOR_HOST`, `FIREBASE_PROJECT_ID=demo-apron` and
+`NEXT_PUBLIC_FIREBASE_AUTH_EMULATOR=http://127.0.0.1:9099`.
 
 ## Where things live
 
 | What | Where |
 | --- | --- |
-| Database tables and first-run setup | `src/lib/db.ts` |
+| Firebase connection | `src/lib/firebase-admin.ts`, `src/lib/firebase-client.ts` |
+| Collections and first-run setup | `src/lib/db.ts` |
+| Sign-in and admin checks | `src/lib/auth.ts`, `src/app/api/admin/session/route.ts` |
 | Starter catalog and default texts (used only for a new, empty database) | `src/lib/seed.ts` |
+| Firebase security rules | `firestore.rules`, `storage.rules` |
 | Reading products and settings for the store | `src/lib/store.ts` |
 | Dashboard pages | `src/app/admin/` |
 | Dashboard actions (all check that you're an admin) | `src/app/admin/actions.ts` |

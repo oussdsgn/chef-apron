@@ -4,8 +4,7 @@ import ConfirmButton from "@/components/admin/ConfirmButton";
 import ProductForm from "@/components/admin/ProductForm";
 import { PageHead } from "@/components/admin/ui";
 import { deleteProduct, duplicateProduct } from "@/app/admin/actions";
-import { db } from "@/lib/db";
-import { getProductById } from "@/lib/store";
+import { getProductById, listAllCategories } from "@/lib/store";
 
 export const metadata: Metadata = { title: "Edit product" };
 
@@ -16,12 +15,11 @@ export default async function EditProductPage({
   params: Promise<{ id: string }>;
   searchParams: Promise<{ created?: string }>;
 }) {
-  const id = Number((await params).id);
+  const { id } = await params;
   const { created } = await searchParams;
-  const product = Number.isInteger(id) ? await getProductById(id) : undefined;
+  const product = await getProductById(id);
   if (!product) notFound();
-  const sql = await db();
-  const categories = await sql<{ slug: string; name: string }[]>`select slug, name from categories order by sort, slug`;
+  const categories = (await listAllCategories()).map((c) => ({ slug: c.slug, name: c.name }));
   return (
     <>
       <PageHead

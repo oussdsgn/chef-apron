@@ -4,7 +4,8 @@ import ConfirmButton from "@/components/admin/ConfirmButton";
 import ImageField from "@/components/admin/ImageField";
 import { PageHead } from "@/components/admin/ui";
 import { deleteCategory, saveCategory } from "@/app/admin/actions";
-import { db } from "@/lib/db";
+import { COL, db } from "@/lib/db";
+import { listAllCategories } from "@/lib/store";
 
 export const metadata: Metadata = { title: "Collections" };
 
@@ -47,10 +48,15 @@ function Fields({ c }: { c?: Row }) {
 }
 
 export default async function CollectionsPage() {
-  const sql = await db();
-  const rows = await sql<Row[]>`
-    select c.*, (select count(*)::int from products p where p.category = c.slug) as count
-    from categories c order by sort, slug`;
+  const [categories, productsSnap] = await Promise.all([
+    listAllCategories(),
+    (await db()).collection(COL.products).select("category").get(),
+  ]);
+  const rows: Row[] = categories.map((c) => ({
+    ...c,
+    image: c.image ?? null,
+    count: productsSnap.docs.filter((d) => d.get("category") === c.slug).length,
+  }));
   return (
     <>
       <PageHead

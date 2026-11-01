@@ -2,13 +2,13 @@ import type { Metadata } from "next";
 import ConfirmButton from "@/components/admin/ConfirmButton";
 import { PageHead, formatDate } from "@/components/admin/ui";
 import { deleteSubscriber } from "@/app/admin/actions";
-import { db } from "@/lib/db";
+import { COL, db, toIso } from "@/lib/db";
 
 export const metadata: Metadata = { title: "Subscribers" };
 
 export default async function SubscribersPage() {
-  const sql = await db();
-  const rows = await sql<{ email: string; created_at: Date }[]>`select * from subscribers order by created_at desc limit 2000`;
+  const snap = await (await db()).collection(COL.subscribers).orderBy("createdAt", "desc").limit(2000).get();
+  const rows = snap.docs.map((d) => ({ email: String(d.get("email")), createdAt: toIso(d.get("createdAt")) }));
   return (
     <>
       <PageHead
@@ -43,7 +43,7 @@ export default async function SubscribersPage() {
                         {r.email}
                       </a>
                     </td>
-                    <td className="muted">{formatDate(r.created_at.toISOString())}</td>
+                    <td className="muted">{formatDate(r.createdAt)}</td>
                     <td className="num">
                       <ConfirmButton
                         action={deleteSubscriber.bind(null, r.email)}

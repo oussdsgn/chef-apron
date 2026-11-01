@@ -3,18 +3,29 @@
 import { useRef, useState } from "react";
 import { uploadImage } from "@/app/admin/actions";
 
-/** Resizes the photo in the browser (max 1800 px, JPEG) so uploads stay small and fast. */
+/**
+ * Resizes the photo in the browser (max 1800 px, JPEG) so uploads stay small and fast,
+ * lowering the quality until it's under ~900 KB.
+ */
 async function compress(file: File, maxSize = 1800): Promise<File> {
   if (!file.type.startsWith("image/") || file.type === "image/gif") return file;
   const bitmap = await createImageBitmap(file);
-  const scale = Math.min(1, maxSize / Math.max(bitmap.width, bitmap.height));
-  const canvas = document.createElement("canvas");
-  canvas.width = Math.round(bitmap.width * scale);
-  canvas.height = Math.round(bitmap.height * scale);
-  canvas.getContext("2d")!.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
-  const blob = await new Promise<Blob | null>((r) => canvas.toBlob(r, "image/jpeg", 0.85));
-  if (!blob) return file;
-  return new File([blob], file.name.replace(/\.\w+$/, "") + ".jpg", { type: "image/jpeg" });
+  let size = maxSize;
+  for (let attempt = 0; attempt < 6; attempt++) {
+    const scale = Math.min(1, size / Math.max(bitmap.width, bitmap.height));
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.round(bitmap.width * scale);
+    canvas.height = Math.round(bitmap.height * scale);
+    canvas.getContext("2d")!.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+    const quality = Math.max(0.6, 0.86 - attempt * 0.06);
+    const blob = await new Promise<Blob | null>((r) => canvas.toBlob(r, "image/jpeg", quality));
+    if (!blob) return file;
+    if (blob.size < 900 * 1024 || attempt === 5) {
+      return new File([blob], file.name.replace(/\.\w+$/, "") + ".jpg", { type: "image/jpeg" });
+    }
+    size = Math.round(size * 0.85);
+  }
+  return file;
 }
 
 export default function ImageField({

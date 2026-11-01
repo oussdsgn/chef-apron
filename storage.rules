@@ -1,0 +1,11 @@
+rules_version = '2';
+
+// Photos are uploaded by the website's server and served through download links, which don't need these rules.
+// Deny direct browser access.
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

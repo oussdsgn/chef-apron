@@ -1,8 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { signOut } from "next-auth/react";
+import { usePathname, useRouter } from "next/navigation";
 
 const links = [
   { href: "/admin", label: "Overview", icon: "M4 13h6V4H4v9Zm0 7h6v-5H4v5Zm10 0h6v-9h-6v9Zm0-16v5h6V4h-6Z" },
@@ -22,6 +21,12 @@ export default function Sidebar({
   newOrders: number;
 }) {
   const pathname = usePathname();
+  const router = useRouter();
+  async function signOut() {
+    await fetch("/api/admin/session", { method: "DELETE" });
+    router.replace("/admin/login");
+    router.refresh();
+  }
   const isActive = (href: string) => (href === "/admin" ? pathname === href : pathname.startsWith(href));
   return (
     <aside className="sidebar">
@@ -58,7 +63,7 @@ export default function Sidebar({
             <span>{admin.email}</span>
           </div>
         </div>
-        <button className="sidebar__signout" onClick={() => signOut({ callbackUrl: "/admin/login" })}>
+        <button className="sidebar__signout" onClick={signOut}>
           Sign out
         </button>
       </div>

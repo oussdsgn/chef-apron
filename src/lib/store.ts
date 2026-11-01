@@ -1,90 +1,94 @@
 import "server-only";
+import type { DocumentSnapshot } from "firebase-admin/firestore";
 import { unstable_cache } from "next/cache";
-import { db } from "./db";
+import { COL, db, toIso } from "./db";
 import { defaultSettings } from "./seed";
 import type { Category, Order, Product, Settings } from "./types";
 
 export const CATALOG_TAG = "catalog";
 export const SETTINGS_TAG = "settings";
 
-type ProductRow = {
-  id: number;
-  slug: string;
-  name: string;
-  category: string;
-  price: number;
-  compare_at_price: number | null;
-  short: string;
-  description: string;
-  details: string[];
-  colors: Product["colors"];
-  sizes: string[] | null;
-  art: Product["art"];
-  image: string | null;
-  is_new: boolean;
-  active: boolean;
-  in_stock: boolean;
-  sort: number;
-};
-
-export function toProduct(r: ProductRow): Product {
+export function toProduct(doc: DocumentSnapshot): Product {
+  const d = doc.data() ?? {};
+  const colors = Array.isArray(d.colors) && d.colors.length ? d.colors : [{ name: "Default", hex: "#cccccc" }];
   return {
-    id: r.id,
-    slug: r.slug,
-    name: r.name,
-    category: r.category,
-    price: r.price,
-    compareAtPrice: r.compare_at_price ?? undefined,
-    short: r.short,
-    description: r.description,
-    details: r.details ?? [],
-    colors: r.colors?.length ? r.colors : [{ name: "Default", hex: "#cccccc" }],
-    sizes: r.sizes?.length ? r.sizes : undefined,
-    art: r.art,
-    image: r.image ?? undefined,
-    isNew: r.is_new,
-    active: r.active,
-    inStock: r.in_stock,
-    sort: r.sort,
+    id: doc.id,
+    slug: d.slug,
+    name: d.name ?? "",
+    category: d.category ?? "",
+    price: Number(d.price ?? 0),
+    compareAtPrice: d.compareAtPrice ?? undefined,
+    short: d.short ?? "",
+    description: d.description ?? "",
+    details: Array.isArray(d.details) ? d.details : [],
+    colors: colors.map((c: Product["colors"][number]) => ({ name: c.name, hex: c.hex, ...(c.image ? { image: c.image } : {}) })),
+    sizes: Array.isArray(d.sizes) && d.sizes.length ? d.sizes : undefined,
+    art: d.art ?? "apron-bib",
+    image: d.image ?? undefined,
+    isNew: Boolean(d.isNew),
+    active: d.active !== false,
+    inStock: d.inStock !== false,
+    sort: Number(d.sort ?? 0),
   };
+}
+
+function toCategory(doc: DocumentSnapshot): Category {
+  const d = doc.data() ?? {};
+  return {
+    slug: doc.id,
+    name: d.name ?? doc.id,
+    title: d.title ?? d.name ?? doc.id,
+    blurb: d.blurb ?? "",
+    image: d.image ?? undefined,
+    sort: Number(d.sort ?? 0),
+  };
+}
+
+async function readCategories(): Promise<Category[]> {
+  const snap = await (await db()).collection(COL.categories).get();
+  return snap.docs.map(toCategory).sort((a, b) => a.sort - b.sort || a.slug.localeCompare(b.slug));
+}
+
+function sortProducts(products: Product[], categories: Category[]) {
+  const order = new Map(categories.map((c) => [c.slug, c.sort]));
+  return products.sort(
+    (a, b) =>
+      (order.get(a.category) ?? 999) - (order.get(b.category) ?? 999) ||
+      a.sort - b.sort ||
+      a.name.localeCompare(b.name),
+  );
 }
 
 /** Every product, including hidden ones (for the dashboard). Not cached. */
 export async function listAllProducts(): Promise<Product[]> {
-  const sql = await db();
-  const rows = await sql<ProductRow[]>`select * from products order by category, sort, id`;
-  return rows.map(toProduct);
+  const [snap, categories] = await Promise.all([(await db()).collection(COL.products).get(), readCategories()]);
+  return sortProducts(snap.docs.map(toProduct), categories);
 }
 
-export async function getProductById(id: number): Promise<Product | undefined> {
-  const sql = await db();
-  const [row] = await sql<ProductRow[]>`select * from products where id = ${id}`;
-  return row ? toProduct(row) : undefined;
+export async function listAllCategories() {
+  return readCategories();
+}
+
+export async function getProductById(id: string): Promise<Product | undefined> {
+  if (!id || id.includes("/")) return undefined;
+  const doc = await (await db()).collection(COL.products).doc(id).get();
+  return doc.exists ? toProduct(doc) : undefined;
 }
 
 /** Products visible in the shop. Cached until the dashboard changes the catalog. */
 export const getProducts = unstable_cache(
   async (): Promise<Product[]> => {
-    const sql = await db();
-    const rows = await sql<ProductRow[]>`
-      select p.* from products p left join categories c on c.slug = p.category
-      where p.active order by coalesce(c.sort, 999), p.sort, p.id`;
-    return rows.map(toProduct);
+    const [snap, categories] = await Promise.all([
+      (await db()).collection(COL.products).where("active", "==", true).get(),
+      readCategories(),
+    ]);
+    return sortProducts(snap.docs.map(toProduct), categories);
   },
-  ["products-v1"],
+  ["products-fs-v1"],
   { tags: [CATALOG_TAG] },
 );
 
-export const getCategories = unstable_cache(
-  async (): Promise<Category[]> => {
-    const sql = await db();
-    const rows = await sql<(Omit<Category, "image"> & { image: string | null })[]>`
-      select slug, name, title, blurb, image, sort from categories order by sort, slug`;
-    return rows.map((r) => ({ ...r, image: r.image ?? undefined }));
-  },
-  ["categories-v1"],
-  { tags: [CATALOG_TAG] },
-);
+export const getCategories = unstable_cache(readCategories, ["categories-fs-v1"], { tags: [CATALOG_TAG] });
 
 function mergeSettings(saved: Partial<Settings> | undefined): Settings {
   const s = saved ?? {};
@@ -98,12 +102,11 @@ function mergeSettings(saved: Partial<Settings> | undefined): Settings {
 }
 
 export async function loadSettings(): Promise<Settings> {
-  const sql = await db();
-  const [row] = await sql<{ value: Partial<Settings> }[]>`select value from settings where key = 'site'`;
-  return mergeSettings(row?.value);
+  const doc = await (await db()).collection(COL.settings).doc("site").get();
+  return mergeSettings(doc.data() as Partial<Settings> | undefined);
 }
 
-export const getSettings = unstable_cache(loadSettings, ["settings-v1"], { tags: [SETTINGS_TAG] });
+export const getSettings = unstable_cache(loadSettings, ["settings-fs-v1"], { tags: [SETTINGS_TAG] });
 
 export async function getProduct(slug: string) {
   return (await getProducts()).find((p) => p.slug === slug);
@@ -131,30 +134,17 @@ export async function searchProducts(query: string) {
 
 // ---------- Orders ----------
 
-type OrderRow = {
-  id: string;
-  created_at: Date;
-  status: Order["status"];
-  customer: Order["customer"];
-  items: Order["items"];
-  subtotal: number;
-  shipping: number;
-  total: number;
-  admin_note: string;
-};
-
-export function toOrder(r: OrderRow): Order {
+export function toOrder(doc: DocumentSnapshot): Order {
+  const d = doc.data() ?? {};
   return {
-    id: r.id,
-    createdAt: r.created_at.toISOString(),
-    status: r.status,
-    customer: r.customer,
-    items: r.items,
-    subtotal: r.subtotal,
-    shipping: r.shipping,
-    total: r.total,
-    adminNote: r.admin_note,
+    id: doc.id,
+    createdAt: toIso(d.createdAt),
+    status: d.status ?? "new",
+    customer: d.customer,
+    items: d.items ?? [],
+    subtotal: d.subtotal ?? 0,
+    shipping: d.shipping ?? 0,
+    total: d.total ?? 0,
+    adminNote: d.adminNote ?? "",
   };
 }
-
-export type OrderRowType = OrderRow;

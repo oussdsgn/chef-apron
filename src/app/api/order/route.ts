@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { db } from "@/lib/db";
+import { Timestamp } from "firebase-admin/firestore";
+import { COL, db } from "@/lib/db";
 import { formatPrice, shippingFor } from "@/lib/format";
 import { getProducts, getSettings } from "@/lib/store";
 import { getWilaya, normalizePhone } from "@/lib/wilayas";
@@ -85,9 +86,16 @@ export async function POST(req: Request) {
 
   // ---- Save the order (this is what the dashboard shows) ----
   try {
-    const sql = await db();
-    await sql`insert into orders (id, customer, items, subtotal, shipping, total)
-              values (${orderId}, ${sql.json(customer)}, ${sql.json(items)}, ${subtotal}, ${shipping}, ${total})`;
+    await (await db()).collection(COL.orders).doc(orderId).create({
+      createdAt: Timestamp.now(),
+      status: "new",
+      customer,
+      items,
+      subtotal,
+      shipping,
+      total,
+      adminNote: "",
+    });
   } catch (err) {
     console.error("Could not save order", orderId, err);
     return NextResponse.json({ error: "We couldn't place your order. Please try again." }, { status: 500 });

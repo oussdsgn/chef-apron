@@ -9,7 +9,12 @@ export type Category = {
   blurb: string;
 };
 
-export type ColorOption = { name: string; hex: string };
+export type ColorOption = {
+  name: string;
+  hex: string;
+  /** Photo of the product in this color. Falls back to the product image. */
+  image?: string;
+};
 
 export type Product = {
   slug: string;
@@ -24,7 +29,7 @@ export type Product = {
   sizes?: string[];
   art: ArtKind;
   isNew?: boolean;
-  /** Optional photo in /public, e.g. "/images/products/classic-bib-apron.jpg". Replaces the illustration. */
+  /** Main photo in /public, e.g. "/images/products/classic-bib-black.jpg". Without one, an illustration is shown. */
   image?: string;
 };
 
@@ -59,22 +64,23 @@ export const products: Product[] = [
     name: "Classic Bib Apron",
     category: "aprons",
     price: 4500,
-    short: "Heavyweight cotton denim with an adjustable neck strap.",
+    short: "Heavy cotton twill with a deep chest pocket and hand pockets.",
     description:
-      "Our everyday workhorse. Cut from 12 oz cotton denim that softens with every wash, with a brass-buckled neck strap, extra-long waist ties and a split chest pocket for pens and thermometers.",
+      "Our everyday workhorse. Cut from a heavy cotton twill that softens with every wash, with wide shoulder straps, a deep chest pocket for pens and thermometers, and two hand pockets at the hips.",
     details: [
-      "12 oz 100% cotton denim",
-      "Adjustable neck strap with brass hardware",
-      "Split chest pocket + two hip pockets",
-      "Machine washable, gets better with age",
+      "280 gsm cotton twill",
+      "Wide adjustable shoulder straps",
+      "Chest pocket + two hand pockets",
+      "Machine washable at 40°C",
     ],
     colors: [
-      { name: "Indigo", hex: "#3d4b63" },
-      { name: "Charcoal", hex: "#3a3a3a" },
-      { name: "Natural", hex: "#d9cdb8" },
+      { name: "Black", hex: "#1f1f1f", image: "/images/products/classic-bib-black.jpg" },
+      { name: "Sand", hex: "#cdbfa8", image: "/images/products/classic-bib-beige.jpg" },
+      { name: "Lavender Grey", hex: "#b9b8c6", image: "/images/products/classic-bib-grey.jpg" },
     ],
     sizes: apronSizes,
     art: "apron-bib",
+    image: "/images/products/classic-bib-black.jpg",
     isNew: true,
   },
   {
@@ -82,39 +88,37 @@ export const products: Product[] = [
     name: "Cross-Back Canvas Apron",
     category: "aprons",
     price: 6500,
-    short: "Waxed canvas, leather straps, zero neck strain.",
+    short: "Straps cross at the back, so there's no strain on your neck.",
     description:
-      "Straps cross over the back to spread the weight across your shoulders instead of your neck — made for twelve-hour shifts. Water-resistant waxed canvas and vegetable-tanned leather straps.",
+      "The straps cross over the back to spread the weight across your shoulders instead of your neck, which matters on twelve-hour shifts. Sturdy cotton canvas in rich, stain-forgiving colors.",
     details: [
-      "10 oz waxed cotton canvas",
-      "Vegetable-tanned leather cross-back straps",
-      "Towel loop and tool pocket",
-      "Wipe clean; re-wax yearly",
+      "Heavy cotton canvas",
+      "Cross-back straps, no neck strap",
+      "Chest pocket + kangaroo hand pocket",
+      "Machine washable",
     ],
     colors: [
-      { name: "Olive", hex: "#5d6248" },
-      { name: "Tobacco", hex: "#7a5236" },
-      { name: "Black", hex: "#262626" },
+      { name: "Forest", hex: "#1f3a33", image: "/images/products/cross-back-forest.jpg" },
+      { name: "Chocolate", hex: "#5a3a26", image: "/images/products/cross-back-chocolate.jpg" },
+      { name: "Mustard", hex: "#d39a2c", image: "/images/products/cross-back-mustard.jpg" },
     ],
     sizes: apronSizes,
     art: "apron-cross",
+    image: "/images/products/cross-back-forest.jpg",
     isNew: true,
   },
   {
-    slug: "bistro-waist-apron",
-    name: "Bistro Waist Apron",
+    slug: "barista-apron",
+    name: "Barista Apron",
     category: "aprons",
     price: 2500,
-    short: "The front-of-house classic with three pockets.",
+    short: "Light, wrap-around ties, made for cafés and front of house.",
     description:
-      "A crisp, knee-length bistro apron for service and prep. Three-section front pocket for order pads, pens and a wine key.",
-    details: ["Poly-cotton twill, stain-release finish", "Three-section front pocket", "Long wrap-around ties"],
-    colors: [
-      { name: "Black", hex: "#1f1f1f" },
-      { name: "Bordeaux", hex: "#5a1f2a" },
-      { name: "White", hex: "#f2f0ea" },
-    ],
+      "A lightweight apron for baristas and service staff, with long ties that wrap around and knot at the front, and a split pocket for pens and order pads.",
+    details: ["Poly-cotton blend, stain-release finish", "Long wrap-around ties", "Split front pocket"],
+    colors: [{ name: "Slate", hex: "#3d4246" }],
     art: "apron-waist",
+    image: "/images/products/barista-apron.jpg",
   },
   {
     slug: "leather-pitmaster-apron",
@@ -125,12 +129,10 @@ export const products: Product[] = [
     short: "Full-grain leather for grills, smokers and open fire.",
     description:
       "Built for live fire. Full-grain leather that shrugs off sparks and grease, with a reinforced bib and riveted stress points. It will outlast your grill.",
-    details: ["Full-grain cowhide leather", "Copper rivets at stress points", "Adjustable neck strap", "Wipe clean with a damp cloth"],
-    colors: [
-      { name: "Saddle", hex: "#9a6438" },
-      { name: "Espresso", hex: "#4a3022" },
-    ],
+    details: ["Full-grain cowhide leather", "Riveted stress points", "Adjustable neck strap", "Wipe clean with a damp cloth"],
+    colors: [{ name: "Espresso", hex: "#3a2a20" }],
     art: "apron-bib",
+    image: "/images/products/leather-apron.jpg",
   },
 
   // ---------- Uniforms ----------
@@ -139,57 +141,52 @@ export const products: Product[] = [
     name: "Signature Chef Jacket",
     category: "uniforms",
     price: 6900,
-    short: "Double-breasted, breathable, reversible front.",
+    short: "Double-breasted, breathable, with a reversible front.",
     description:
-      "The classic double-breasted jacket, reworked with a lightweight cotton blend and mesh back panel to keep you cool on the line. Reversible front hides spills mid-service.",
+      "The classic double-breasted jacket in a lightweight cotton blend that breathes on a hot line. The reversible front lets you hide a spill mid-service.",
     details: [
       "65% cotton / 35% polyester, 190 gsm",
-      "Breathable mesh back yoke",
-      "Knot buttons, reversible front",
+      "Double-breasted, reversible front",
       "Thermometer pocket on sleeve",
+      "Washable at 60°C",
     ],
     colors: [
-      { name: "White", hex: "#f4f2ee" },
-      { name: "Black", hex: "#222222" },
-      { name: "Slate", hex: "#56606b" },
+      { name: "White", hex: "#f4f2ee", image: "/images/products/chef-jacket-white.jpg" },
+      { name: "Black", hex: "#1c1f24", image: "/images/products/chef-jacket-black.jpg" },
     ],
     sizes: jacketSizes,
     art: "jacket",
+    image: "/images/products/chef-jacket-white.jpg",
     isNew: true,
   },
   {
-    slug: "short-sleeve-line-jacket",
-    name: "Short-Sleeve Line Jacket",
+    slug: "piped-chef-jacket",
+    name: "Contrast Piping Chef Jacket",
     category: "uniforms",
-    price: 5500,
-    short: "Snap front for hot kitchens and fast changes.",
+    price: 7500,
+    short: "White jacket with black piping for the open kitchen.",
     description:
-      "A modern, single-breasted short-sleeve jacket with concealed snaps. Stretch fabric moves with you between stations.",
-    details: ["Stretch cotton blend", "Concealed snap front", "Side vents for airflow"],
-    colors: [
-      { name: "Sage", hex: "#8c9a83" },
-      { name: "White", hex: "#f4f2ee" },
-      { name: "Navy", hex: "#2b3447" },
-    ],
+      "Made for kitchens in view of the guests. A tailored double-breasted jacket with black contrast piping on the collar, placket and cuffs.",
+    details: ["Cotton-rich blend", "Black contrast piping", "Tailored fit", "Washable at 60°C"],
+    colors: [{ name: "White / Black", hex: "#f4f2ee" }],
     sizes: jacketSizes,
-    art: "jacket-short",
+    art: "jacket",
+    image: "/images/products/piped-chef-jacket.jpg",
     isNew: true,
   },
   {
-    slug: "classic-check-chef-pants",
-    name: "Classic Check Chef Pants",
+    slug: "cargo-chef-pants",
+    name: "Cargo Chef Pants",
     category: "uniforms",
     price: 4200,
-    short: "Houndstooth baggies with an elastic waist.",
+    short: "Relaxed fit, elastic waist and deep cargo pockets.",
     description:
-      "Relaxed-fit chef pants in the traditional small check, with an elastic drawstring waist, deep pockets and a tapered ankle that stays clear of the floor.",
-    details: ["100% cotton twill", "Elastic waist + drawstring", "Two side pockets, one back pocket"],
-    colors: [
-      { name: "Black/White", hex: "#2a2a2a" },
-      { name: "Navy/White", hex: "#28324a" },
-    ],
+      "Comfortable chef pants with an elastic drawstring waist, deep cargo pockets for towels and tools, and a tapered leg that stays clear of the floor.",
+    details: ["Cotton-poly twill", "Elastic waist + drawstring", "Two cargo pockets, two side pockets"],
+    colors: [{ name: "Black", hex: "#1f1f1f" }],
     sizes: jacketSizes,
     art: "pants",
+    image: "/images/products/cargo-chef-pants.jpg",
   },
   {
     slug: "pleated-toque",
@@ -198,44 +195,55 @@ export const products: Product[] = [
     price: 1800,
     short: "The traditional tall chef's hat, adjustable.",
     description:
-      "A tall, pleated toque in breathable cotton with a velcro-adjustable band. Holds its shape service after service.",
+      "A tall, pleated toque in breathable cotton with an adjustable band. Holds its shape service after service.",
     details: ["Breathable cotton", "Adjustable band", "Holds shape after washing"],
     colors: [{ name: "White", hex: "#f6f4ef" }],
     sizes: ["One size"],
     art: "hat",
+    image: "/images/products/toque.jpg",
   },
 
   // ---------- Utensils ----------
   {
     slug: "gyuto-chef-knife",
-    name: '8" Gyuto Chef Knife',
+    name: '8" Chef Knife',
     category: "utensils",
     price: 14500,
-    short: "Hand-sharpened stainless steel, walnut handle.",
+    short: "Stainless steel blade with a full-tang black handle.",
     description:
-      "A Japanese-style chef knife with a thin, hard stainless blade sharpened to 15° per side, balanced at the bolster and finished with an oiled walnut handle.",
-    details: ["VG-10 stainless core, 60 HRC", '8" (210 mm) blade', "Oiled walnut handle", "Hand wash only"],
-    colors: [
-      { name: "Walnut", hex: "#5b3b28" },
-      { name: "Ebony", hex: "#1e1a18" },
-    ],
+      "An all-purpose chef knife with a thin, hard stainless blade sharpened to 15° per side, balanced at the bolster, with a riveted full-tang handle.",
+    details: ["High-carbon stainless steel", '8" (210 mm) blade', "Full-tang riveted handle", "Hand wash only"],
+    colors: [{ name: "Black", hex: "#1e1a18" }],
     art: "knife",
+    image: "/images/products/gyuto-knife.jpg",
     isNew: true,
   },
   {
-    slug: "waxed-canvas-knife-roll",
-    name: "Waxed Canvas Knife Roll",
+    slug: "chef-knife-set",
+    name: "Chef Knife Set (4 pcs)",
     category: "utensils",
-    price: 8500,
-    short: "Carries eight knives and your tweezers.",
+    price: 22000,
+    compareAtPrice: 26000,
+    short: "Chef knife, santoku, cleaver and boning knife.",
     description:
-      "Roll up your kit and go. Eight knife slots, a zip pocket for small tools and a leather carry strap. Made from the same waxed canvas as our aprons.",
-    details: ["Waxed cotton canvas + leather", "8 knife slots + zip pocket", "Shoulder strap included"],
-    colors: [
-      { name: "Olive", hex: "#5d6248" },
-      { name: "Tobacco", hex: "#7a5236" },
-    ],
+      "The four knives a kitchen needs: a chef knife, a santoku, a cleaver and a flexible boning knife, all with matching wooden handles.",
+    details: ["Stainless steel blades", "Wooden handles with three rivets", "Chef, santoku, cleaver, boning", "Hand wash only"],
+    colors: [{ name: "Wood", hex: "#4a2c22" }],
+    art: "knife",
+    image: "/images/products/knife-set.jpg",
+  },
+  {
+    slug: "knife-roll-set",
+    name: "Knife Roll Set",
+    category: "utensils",
+    price: 18500,
+    short: "Three knives, carving fork and honing steel in a leather roll.",
+    description:
+      "A complete kit to carry to work: three knives, a carving fork and a honing steel, all with olive-wood handles, rolled up in a leather case.",
+    details: ["3 knives + carving fork + honing steel", "Olive-wood handles", "Leather roll with straps"],
+    colors: [{ name: "Olive wood", hex: "#b07a4f" }],
     art: "knife-roll",
+    image: "/images/products/knife-roll.jpg",
     isNew: true,
   },
   {
@@ -243,45 +251,49 @@ export const products: Product[] = [
     name: "Balloon Whisk",
     category: "utensils",
     price: 1600,
-    short: "Twelve flexible wires for airy batters.",
-    description: "A 12-inch balloon whisk with twelve flexible stainless wires and a sealed handle that never traps water.",
-    details: ["18/8 stainless steel", "Sealed handle", '12" length'],
+    short: "Flexible stainless wires for airy batters.",
+    description: "A 30 cm balloon whisk with flexible stainless wires and a sealed handle that never traps water.",
+    details: ["18/8 stainless steel", "Sealed handle", "30 cm length"],
     colors: [{ name: "Steel", hex: "#a9adb2" }],
     art: "whisk",
+    image: "/images/products/whisk.jpg",
   },
   {
     slug: "precision-tongs",
-    name: "Precision Tongs",
+    name: "Grill Tongs",
     category: "utensils",
     price: 1500,
-    short: "Scalloped tips, locking hinge, two lengths.",
-    description: "Spring-loaded tongs with fine scalloped tips for plating and a firm grip for searing.",
-    details: ["Stainless steel", "Locking hinge", "Available 9\" and 12\""],
+    short: "Locking stainless tongs for the grill and the pass.",
+    description: "Spring-loaded tongs with scalloped tips for a firm grip when searing and turning, and a lock that keeps them closed in the drawer.",
+    details: ["Stainless steel", "Locking hinge", "Available 23 cm and 30 cm"],
     colors: [{ name: "Steel", hex: "#a9adb2" }],
-    sizes: ['9"', '12"'],
+    sizes: ["23 cm", "30 cm"],
     art: "tongs",
+    image: "/images/products/tongs.jpg",
   },
   {
-    slug: "fish-spatula",
-    name: "Fish Spatula",
+    slug: "olive-wood-spatula",
+    name: "Olive Wood Spatula",
     category: "utensils",
-    price: 1900,
-    short: "Thin, flexible, slotted — for everything delicate.",
-    description: "The spatula chefs reach for first. A thin, angled, flexible head slides under fish fillets, eggs and pancakes without tearing.",
-    details: ["Flexible stainless head", "Walnut handle", "Left- and right-hand friendly"],
-    colors: [{ name: "Walnut", hex: "#5b3b28" }],
+    price: 1200,
+    short: "Hand-carved, won't scratch your pans.",
+    description: "A sturdy hand-carved olive-wood spatula with a slanted edge for stirring, scraping and turning. Gentle on non-stick and enamel pans.",
+    details: ["Solid olive wood", "Slanted edge", "Hand wash, oil occasionally"],
+    colors: [{ name: "Olive wood", hex: "#b07a4f" }],
     art: "spatula",
+    image: "/images/products/wooden-spatula.jpg",
   },
   {
     slug: "serving-ladle",
-    name: "Serving Ladle",
+    name: "Professional Ladle",
     category: "utensils",
-    price: 1200,
-    short: "Sauce-ready 2 oz bowl with a pour lip.",
-    description: "A one-piece stainless ladle with a measured 2 oz bowl and pour lip for clean saucing.",
-    details: ["One-piece stainless steel", "2 oz / 60 ml bowl", "Hanging hook"],
+    price: 1300,
+    short: "One-piece stainless ladle with a hanging hook.",
+    description: "The ladle you see on every professional line: a one-piece stainless ladle with a measured bowl and a hook to hang it above the station.",
+    details: ["One-piece stainless steel", "60 ml bowl", "Hanging hook"],
     colors: [{ name: "Steel", hex: "#a9adb2" }],
     art: "ladle",
+    image: "/images/products/ladle.jpg",
   },
 ];
 

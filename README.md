@@ -50,10 +50,12 @@ If none of the order variables is set, the live site refuses orders with a "call
 
 ### Product photos
 
-Products use built-in illustrations until you add real photos. To use a photo:
+Photos live in `public/images/products/` (product shots) and `public/images/site/` (hero, collections, newsletter, about).
+Each product has a main `image`, and a color can have its own `image`, so picking a color on the product page shows that photo.
 
-1. Put the image in `public/images/products/`, e.g. `public/images/products/classic-bib-apron.jpg`. Square images look best.
-2. Add `image: "/images/products/classic-bib-apron.jpg"` to that product in `src/lib/products.ts`.
+The current photos are free stock photos from Unsplash (see `PHOTO-CREDITS.md`). They're placeholders that show similar items.
+Before launch, replace them with photos of your own products, keeping the same file names, or update the paths in `src/lib/products.ts`.
+Square images about 1200 × 1200 px work best. A product with no photo falls back to a built-in illustration.
 
 ### Still to connect
 

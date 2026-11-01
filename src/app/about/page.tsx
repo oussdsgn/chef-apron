@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import ProductArt from "@/components/ProductArt";
+import Image from "next/image";
 import { Features } from "@/components/Sections";
 
 export const metadata: Metadata = { title: "About us" };
@@ -30,7 +30,13 @@ export default function AboutPage() {
             </Link>
           </div>
           <div className="split__art">
-            <ProductArt kind="apron-bib" color="#3d4b63" />
+            <Image
+              src="/images/site/about.jpg"
+              alt="A restaurant team in white aprons standing together"
+              fill
+              sizes="(max-width: 900px) 100vw, 50vw"
+              className="cover"
+            />
           </div>
         </div>
       </section>

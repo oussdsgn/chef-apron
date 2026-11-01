@@ -1,6 +1,6 @@
 import Link from "next/link";
 import ProductCard from "@/components/ProductCard";
-import ProductArt from "@/components/ProductArt";
+import Image from "next/image";
 import { Collections, Features, NewsletterBanner, Testimonial } from "@/components/Sections";
 import { newArrivals } from "@/lib/products";
 
@@ -11,17 +11,14 @@ export default function HomePage() {
       <section className="container">
         <div className="hero">
           <h1 className="hero__title">Workwear for the line, made to last</h1>
-          <div className="hero__art" aria-hidden>
-            <div className="hero__art-item hero__art-item--a">
-              <ProductArt kind="apron-cross" color="#c9b99a" />
-            </div>
-            <div className="hero__art-item hero__art-item--b">
-              <ProductArt kind="jacket" color="#f4f2ee" />
-            </div>
-            <div className="hero__art-item hero__art-item--c">
-              <ProductArt kind="knife" color="#5b3b28" />
-            </div>
-          </div>
+          <Image
+            src="/images/site/hero.jpg"
+            alt="A chef in a white jacket preparing vegetables in a professional kitchen"
+            fill
+            priority
+            sizes="100vw"
+            className="hero__photo"
+          />
           <div className="hero__actions">
             <Link href="/products" className="btn btn--light">
               Shop collection

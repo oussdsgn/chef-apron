@@ -6,22 +6,27 @@ export default function ProductImage({
   product,
   color,
   priority,
-  sizes = "(max-width: 768px) 100vw, 33vw",
+  sizes = "(max-width: 900px) 50vw, 33vw",
 }: {
   product: Product;
+  /** Hex of the selected color; picks that color's photo when there is one. */
   color?: string;
   priority?: boolean;
   sizes?: string;
 }) {
-  if (product.image) {
+  const option = color ? product.colors.find((c) => c.hex === color) : undefined;
+  const src = option?.image ?? product.image;
+
+  if (src) {
     return (
       <Image
-        src={product.image}
-        alt={product.name}
+        key={src}
+        src={src}
+        alt={option ? `${product.name} in ${option.name}` : product.name}
         fill
         sizes={sizes}
         priority={priority}
-        style={{ objectFit: "cover" }}
+        className="product-photo"
       />
     );
   }

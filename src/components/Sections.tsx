@@ -1,8 +1,8 @@
 import Link from "next/link";
-import { categories, productsIn } from "@/lib/products";
+import Image from "next/image";
+import { categories } from "@/lib/products";
 import { formatPrice, site } from "@/lib/site";
 import { ChatIcon, LockIcon, ReturnIcon, StarIcon, TruckIcon } from "./Icons";
-import ProductArt from "./ProductArt";
 import Newsletter from "./Newsletter";
 
 export function Features() {
@@ -48,18 +48,19 @@ export function Testimonial() {
 
 export function Collections() {
   const [first, ...rest] = categories;
-  const tile = (slug: string, title: string, big?: boolean) => {
-    const sample = productsIn(slug as never)[0];
-    return (
-      <Link key={slug} href={`/collections/${slug}`} className={`collection-tile ${big ? "collection-tile--big" : ""}`}>
-        <h3>{title}</h3>
-        <span className="collection-tile__cta">Shop now →</span>
-        <div className="collection-tile__art">
-          <ProductArt kind={sample.art} color={sample.colors[0].hex} />
-        </div>
-      </Link>
-    );
-  };
+  const tile = (slug: string, title: string, big?: boolean) => (
+    <Link key={slug} href={`/collections/${slug}`} className={`collection-tile ${big ? "collection-tile--big" : ""}`}>
+      <Image
+        src={`/images/site/collection-${slug}.jpg`}
+        alt=""
+        fill
+        sizes={big ? "(max-width: 900px) 100vw, 50vw" : "(max-width: 900px) 100vw, 50vw"}
+        className="collection-tile__photo"
+      />
+      <h3>{title}</h3>
+      <span className="collection-tile__cta">Shop now →</span>
+    </Link>
+  );
   return (
     <section className="container section">
       <div className="section-head section-head--center">
@@ -83,8 +84,14 @@ export function NewsletterBanner() {
           <p>New drops, restocks and recipes from chefs who wear our aprons. No spam.</p>
           <Newsletter />
         </div>
-        <div className="newsletter__art" aria-hidden>
-          <ProductArt kind="apron-cross" color="#c9b99a" />
+        <div className="newsletter__art">
+          <Image
+            src="/images/site/newsletter.jpg"
+            alt="A woman wearing a sand-colored bib apron"
+            fill
+            sizes="(max-width: 900px) 100vw, 50vw"
+            className="cover"
+          />
         </div>
       </div>
     </section>

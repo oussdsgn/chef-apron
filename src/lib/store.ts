@@ -2,7 +2,7 @@ import "server-only";
 import type { DocumentSnapshot } from "firebase-admin/firestore";
 import { unstable_cache } from "next/cache";
 import { COL, db, toIso } from "./db";
-import { defaultSettings } from "./seed";
+import { defaultSettings, seedCategories, seedProducts } from "./seed";
 import type { Category, Order, Product, Settings } from "./types";
 
 export const CATALOG_TAG = "catalog";
@@ -76,7 +76,7 @@ export async function getProductById(id: string): Promise<Product | undefined> {
 }
 
 /** Products visible in the shop. Cached until the dashboard changes the catalog. */
-export const getProducts = unstable_cache(
+const cachedProducts = unstable_cache(
   async (): Promise<Product[]> => {
     const [snap, categories] = await Promise.all([
       (await db()).collection(COL.products).where("active", "==", true).get(),
@@ -88,7 +88,35 @@ export const getProducts = unstable_cache(
   { tags: [CATALOG_TAG] },
 );
 
-export const getCategories = unstable_cache(readCategories, ["categories-fs-v1"], { tags: [CATALOG_TAG] });
+const cachedCategories = unstable_cache(readCategories, ["categories-fs-v1"], { tags: [CATALOG_TAG] });
+
+// If Firebase is unreachable or not configured yet, keep the shop online with the built-in starter catalog
+// instead of showing an error page. Errors aren't cached, so live data returns as soon as Firebase works.
+function logFallback(what: string, err: unknown) {
+  console.error(`[apron] Could not load ${what} from Firebase, showing built-in defaults. Check /api/health.`, err);
+}
+
+const fallbackProducts = (): Product[] =>
+  seedProducts.map((p, i) => ({ ...p, id: p.slug, isNew: p.isNew ?? false, active: true, inStock: true, sort: i }));
+const fallbackCategories = (): Category[] => seedCategories.map((c, i) => ({ ...c, sort: i }));
+
+export async function getProducts(): Promise<Product[]> {
+  try {
+    return await cachedProducts();
+  } catch (err) {
+    logFallback("products", err);
+    return fallbackProducts();
+  }
+}
+
+export async function getCategories(): Promise<Category[]> {
+  try {
+    return await cachedCategories();
+  } catch (err) {
+    logFallback("collections", err);
+    return fallbackCategories();
+  }
+}
 
 function mergeSettings(saved: Partial<Settings> | undefined): Settings {
   const s = saved ?? {};
@@ -106,7 +134,16 @@ export async function loadSettings(): Promise<Settings> {
   return mergeSettings(doc.data() as Partial<Settings> | undefined);
 }
 
-export const getSettings = unstable_cache(loadSettings, ["settings-fs-v1"], { tags: [SETTINGS_TAG] });
+const cachedSettings = unstable_cache(loadSettings, ["settings-fs-v1"], { tags: [SETTINGS_TAG] });
+
+export async function getSettings(): Promise<Settings> {
+  try {
+    return await cachedSettings();
+  } catch (err) {
+    logFallback("settings", err);
+    return mergeSettings(undefined);
+  }
+}
 
 export async function getProduct(slug: string) {
   return (await getProducts()).find((p) => p.slug === slug);

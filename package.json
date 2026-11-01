@@ -26,5 +26,8 @@
     "postcss": "^8.5.32",
     "zod": "^4.6.6",
     "@grpc/grpc-js": "^1.14.0"
+  },
+  "engines": {
+    "node": "22.x"
   }
 }

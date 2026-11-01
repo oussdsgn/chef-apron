@@ -7,10 +7,10 @@ import Newsletter from "./Newsletter";
 
 export function Features() {
   const items = [
-    { icon: <TruckIcon />, title: "Free shipping", text: `On orders over ${formatPrice(site.freeShippingThreshold)}` },
+    { icon: <TruckIcon />, title: "Delivery to 58 wilayas", text: `Free over ${formatPrice(site.freeShippingThreshold)}` },
     { icon: <ReturnIcon />, title: "30-day returns", text: "Unworn items, no questions" },
     { icon: <ChatIcon />, title: "Chef support", text: "Sizing help by phone & email" },
-    { icon: <LockIcon />, title: "Secure payments", text: "Processed by Stripe" },
+    { icon: <LockIcon />, title: "Cash on delivery", text: "Pay when your order arrives" },
   ];
   return (
     <section className="container features">

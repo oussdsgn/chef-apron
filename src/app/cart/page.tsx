@@ -30,7 +30,7 @@ export default function CartPage() {
               <span>Subtotal</span>
               <strong>{formatPrice(subtotal)}</strong>
             </div>
-            <p className="muted small">Shipping and taxes calculated at checkout.</p>
+            <p className="muted small">Delivery fee calculated at checkout. Pay cash on delivery.</p>
             <CheckoutButton />
           </aside>
         </div>

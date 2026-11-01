@@ -106,7 +106,7 @@ export default function ProductDetail({ product }: { product: Product }) {
         </div>
 
         <p className="muted small">
-          Free shipping over {formatPrice(site.freeShippingThreshold)} · 30-day returns
+          Free delivery over {formatPrice(site.freeShippingThreshold)} · Cash on delivery · 30-day returns
         </p>
 
         <details className="accordion" open>
@@ -124,7 +124,7 @@ export default function ProductDetail({ product }: { product: Product }) {
         <details className="accordion">
           <summary>Shipping &amp; returns</summary>
           <p>
-            Orders ship within 1–2 business days. Unworn, unwashed items can be returned within 30 days.{" "}
+            We deliver to all 58 wilayas and you pay cash on delivery. Orders ship within 1–2 business days. Unworn, unwashed items can be returned within 30 days.{" "}
             <Link href="/legal/shipping-policy">Read more</Link>
           </p>
         </details>

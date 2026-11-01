@@ -1,10 +1,11 @@
 import type { MetadataRoute } from "next";
-import { categories, products } from "@/lib/products";
+import { getCategories, getProducts } from "@/lib/store";
+import { siteUrl } from "@/lib/url";
 
-export default function sitemap(): MetadataRoute.Sitemap {
-  const base =
-    process.env.NEXT_PUBLIC_SITE_URL ??
-    (process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : "http://localhost:3000");
+export const dynamic = "force-dynamic";
+
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  const [products, categories] = await Promise.all([getProducts(), getCategories()]);
   const paths = [
     "",
     "/products",
@@ -14,5 +15,5 @@ export default function sitemap(): MetadataRoute.Sitemap {
     ...categories.map((c) => `/collections/${c.slug}`),
     ...products.map((p) => `/products/${p.slug}`),
   ];
-  return paths.map((p) => ({ url: `${base}${p}` }));
+  return paths.map((p) => ({ url: `${siteUrl.replace(/\/$/, "")}${p}` }));
 }

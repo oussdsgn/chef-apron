@@ -4,19 +4,19 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useCart } from "./CartProvider";
+import { useStore } from "./StoreProvider";
 import { BagIcon, CloseIcon, MenuIcon, SearchIcon } from "./Icons";
 
-const nav = [
-  { href: "/products", label: "Shop" },
-  { href: "/collections/aprons", label: "Aprons" },
-  { href: "/collections/uniforms", label: "Uniforms" },
-  { href: "/collections/utensils", label: "Utensils" },
-  { href: "/about", label: "About" },
-  { href: "/contact", label: "Contact" },
-];
 
 export default function Header() {
   const { count, open } = useCart();
+  const { categories, settings } = useStore();
+  const nav = [
+    { href: "/products", label: "Shop" },
+    ...categories.map((c) => ({ href: `/collections/${c.slug}`, label: c.name })),
+    { href: "/about", label: "About" },
+    { href: "/contact", label: "Contact" },
+  ];
   const [menuOpen, setMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const pathname = usePathname();
@@ -53,8 +53,8 @@ export default function Header() {
           {menuOpen ? <CloseIcon /> : <MenuIcon />}
         </button>
 
-        <Link href="/" className="wordmark" aria-label="Apron home">
-          APRON
+        <Link href="/" className="wordmark" aria-label={`${settings.store.name} home`}>
+          {settings.store.name.toUpperCase()}
         </Link>
 
         <div className="header__actions">

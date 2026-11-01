@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
-import { getProduct } from "@/lib/products";
+import { useStore } from "./StoreProvider";
 
 export type CartLine = {
   slug: string;
@@ -29,7 +29,10 @@ const CartContext = createContext<CartContextValue | null>(null);
 export const lineKey = (l: Pick<CartLine, "slug" | "color" | "size">) => `${l.slug}|${l.color}|${l.size ?? ""}`;
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
-  const [lines, setLines] = useState<CartLine[]>([]);
+  const { getProduct } = useStore();
+  const [allLines, setLines] = useState<CartLine[]>([]);
+  // Drop items whose product was removed or hidden in the dashboard.
+  const lines = useMemo(() => allLines.filter((l) => getProduct(l.slug)), [allLines, getProduct]);
   const [hydrated, setHydrated] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
 
@@ -38,7 +41,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (raw) {
         const parsed = JSON.parse(raw) as CartLine[];
-        setLines(parsed.filter((l) => getProduct(l.slug) && l.quantity > 0));
+        setLines(parsed.filter((l) => typeof l.slug === "string" && l.quantity > 0));
       }
     } catch {
       /* storage unavailable */
@@ -54,6 +57,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       /* storage unavailable */
     }
   }, [lines, hydrated]);
+
 
   const add = useCallback((line: CartLine) => {
     setLines((prev) => {
@@ -93,7 +97,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       remove,
       clear,
     };
-  }, [lines, isOpen, add, setQuantity, remove, clear]);
+  }, [lines, isOpen, add, setQuantity, remove, clear, getProduct]);
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
 }

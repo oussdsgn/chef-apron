@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { useEffect } from "react";
-import { getProduct } from "@/lib/products";
-import { formatPrice, site } from "@/lib/site";
+import { formatPrice } from "@/lib/format";
+import { useStore } from "./StoreProvider";
 import { lineKey, useCart } from "./CartProvider";
 import { CloseIcon } from "./Icons";
 import ProductImage from "./ProductImage";
@@ -11,6 +11,7 @@ import CheckoutButton from "./CheckoutButton";
 
 export function CartLines({ compact }: { compact?: boolean }) {
   const { lines, setQuantity, remove } = useCart();
+  const { getProduct } = useStore();
   return (
     <ul className={`cart-lines ${compact ? "cart-lines--compact" : ""}`}>
       {lines.map((line) => {
@@ -58,8 +59,11 @@ export function CartLines({ compact }: { compact?: boolean }) {
 
 export function ShippingProgress() {
   const { subtotal } = useCart();
-  const remaining = site.freeShippingThreshold - subtotal;
-  const pct = Math.min(100, (subtotal / site.freeShippingThreshold) * 100);
+  const { settings } = useStore();
+  const threshold = settings.shipping.freeThreshold;
+  const remaining = threshold - subtotal;
+  if (threshold <= 0) return null;
+  const pct = Math.min(100, (subtotal / threshold) * 100);
   return (
     <div className="ship-progress">
       <p>

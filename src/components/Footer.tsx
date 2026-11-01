@@ -1,32 +1,36 @@
 import Link from "next/link";
-import { site } from "@/lib/site";
+import type { Category, Settings } from "@/lib/types";
 
-export default function Footer() {
+export default function Footer({ settings, categories }: { settings: Settings; categories: Category[] }) {
+  const { store } = settings;
+  const social = [
+    ["Instagram", store.instagram],
+    ["TikTok", store.tiktok],
+    ["Facebook", store.facebook],
+  ].filter(([, url]) => url);
   return (
     <footer className="footer">
       <div className="container footer__grid">
         <div className="footer__brand">
           <Link href="/" className="wordmark wordmark--light">
-            APRON
+            {store.name.toUpperCase()}
           </Link>
-          <p>{site.tagline}</p>
+          <p>{store.tagline}</p>
           <div className="footer__social">
-            <a href={site.social.instagram} target="_blank" rel="noreferrer">
-              Instagram
-            </a>
-            <a href={site.social.tiktok} target="_blank" rel="noreferrer">
-              TikTok
-            </a>
-            <a href={site.social.facebook} target="_blank" rel="noreferrer">
-              Facebook
-            </a>
+            {social.map(([label, url]) => (
+              <a key={label} href={url} target="_blank" rel="noreferrer">
+                {label}
+              </a>
+            ))}
           </div>
         </div>
         <div>
           <h4>Shop</h4>
-          <Link href="/collections/aprons">Aprons</Link>
-          <Link href="/collections/uniforms">Chef uniforms</Link>
-          <Link href="/collections/utensils">Utensils</Link>
+          {categories.map((c) => (
+            <Link key={c.slug} href={`/collections/${c.slug}`}>
+              {c.name}
+            </Link>
+          ))}
           <Link href="/products">All products</Link>
         </div>
         <div>
@@ -40,13 +44,13 @@ export default function Footer() {
           <h4>Company</h4>
           <Link href="/about">About us</Link>
           <Link href="/contact">Contact</Link>
-          <a href={`mailto:${site.email}`}>{site.email}</a>
-          <a href={`tel:${site.phone.replace(/[^+\d]/g, "")}`}>{site.phone}</a>
+          {store.email && <a href={`mailto:${store.email}`}>{store.email}</a>}
+          {store.phone && <a href={`tel:${store.phone.replace(/[^+\d]/g, "")}`}>{store.phone}</a>}
         </div>
       </div>
       <div className="container footer__bottom">
         <span>
-          © {new Date().getFullYear()} {site.name}. All rights reserved.
+          © {new Date().getFullYear()} {store.name}. All rights reserved.
         </span>
       </div>
     </footer>

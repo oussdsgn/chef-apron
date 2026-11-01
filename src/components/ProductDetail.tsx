@@ -2,10 +2,10 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import type { Product } from "@/lib/products";
-import { getCategory } from "@/lib/products";
-import { formatPrice, site } from "@/lib/site";
+import { formatPrice } from "@/lib/format";
+import type { Product } from "@/lib/types";
 import { useCart } from "./CartProvider";
+import { useStore } from "./StoreProvider";
 import ProductImage from "./ProductImage";
 
 export default function ProductDetail({ product }: { product: Product }) {
@@ -14,6 +14,7 @@ export default function ProductDetail({ product }: { product: Product }) {
   const [size, setSize] = useState<string | undefined>(product.sizes?.length === 1 ? product.sizes[0] : undefined);
   const [qty, setQty] = useState(1);
   const [error, setError] = useState(false);
+  const { getCategory, settings } = useStore();
   const category = getCategory(product.category);
 
   function addToCart() {
@@ -100,13 +101,14 @@ export default function ProductDetail({ product }: { product: Product }) {
               +
             </button>
           </div>
-          <button className="btn btn--dark btn--grow" onClick={addToCart}>
-            Add to cart — {formatPrice(product.price * qty)}
+          <button className="btn btn--dark btn--grow" onClick={addToCart} disabled={!product.inStock}>
+            {product.inStock ? <>Add to cart — {formatPrice(product.price * qty)}</> : "Out of stock"}
           </button>
         </div>
 
         <p className="muted small">
-          Free delivery over {formatPrice(site.freeShippingThreshold)} · Cash on delivery · 30-day returns
+          {settings.shipping.freeThreshold > 0 && <>Free delivery over {formatPrice(settings.shipping.freeThreshold)} · </>}
+          Cash on delivery · 30-day returns
         </p>
 
         <details className="accordion" open>

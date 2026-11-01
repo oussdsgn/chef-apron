@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
-import { getProduct } from "@/lib/products";
-import { formatPrice, shippingFor } from "@/lib/site";
+import { db } from "@/lib/db";
+import { formatPrice, shippingFor } from "@/lib/format";
+import { getProducts, getSettings } from "@/lib/store";
 import { getWilaya, normalizePhone } from "@/lib/wilayas";
 
 type IncomingLine = { slug?: unknown; color?: unknown; size?: unknown; quantity?: unknown };
@@ -39,35 +40,58 @@ export async function POST(req: Request) {
   }
 
   // ---- Items: never trust prices from the browser ----
-  const items: { name: string; variant: string; quantity: number; unitPrice: number }[] = [];
+  const [catalog, settings] = await Promise.all([getProducts(), getSettings()]);
+  const items: { slug: string; name: string; variant: string; quantity: number; unitPrice: number }[] = [];
+  const unavailable: string[] = [];
   for (const raw of body.lines ?? []) {
-    const product = typeof raw.slug === "string" ? getProduct(raw.slug) : undefined;
+    const product = typeof raw.slug === "string" ? catalog.find((p) => p.slug === raw.slug) : undefined;
     const quantity = Number(raw.quantity);
     if (!product || !Number.isInteger(quantity) || quantity < 1 || quantity > 99) continue;
     const color = product.colors.find((col) => col.name === raw.color)?.name ?? product.colors[0].name;
     const size = typeof raw.size === "string" && product.sizes?.includes(raw.size) ? raw.size : undefined;
     if (product.sizes && !size) continue;
-    items.push({ name: product.name, variant: [color, size].filter(Boolean).join(" · "), quantity, unitPrice: product.price });
+    if (!product.inStock) {
+      unavailable.push(product.name);
+      continue;
+    }
+    items.push({ slug: product.slug, name: product.name, variant: [color, size].filter(Boolean).join(" · "), quantity, unitPrice: product.price });
+  }
+  if (unavailable.length) {
+    return NextResponse.json(
+      { error: `Sorry, ${unavailable.join(", ")} just went out of stock. Please remove it from your cart.` },
+      { status: 409 },
+    );
   }
   if (items.length === 0) {
     return NextResponse.json({ error: "Your cart is empty." }, { status: 400 });
   }
 
   const subtotal = items.reduce((s, i) => s + i.unitPrice * i.quantity, 0);
-  const shipping = shippingFor(subtotal, wilaya!.code);
+  const shipping = shippingFor(settings.shipping, subtotal, wilaya!.code);
   const total = subtotal + shipping;
   const orderId = `AP-${Date.now().toString(36).toUpperCase()}${Math.floor(Math.random() * 36 ** 2).toString(36).toUpperCase().padStart(2, "0")}`;
 
+  const customer = { name, phone, wilayaCode: wilaya!.code, wilaya: wilaya!.name, commune, address, note };
   const order = {
     orderId,
     createdAt: new Date().toISOString(),
     payment: "Cash on delivery",
-    customer: { name, phone, wilaya: `${wilaya!.code} - ${wilaya!.name}`, commune, address, note },
+    customer,
     items,
     subtotal,
     shipping,
     total,
   };
+
+  // ---- Save the order (this is what the dashboard shows) ----
+  try {
+    const sql = await db();
+    await sql`insert into orders (id, customer, items, subtotal, shipping, total)
+              values (${orderId}, ${sql.json(customer)}, ${sql.json(items)}, ${subtotal}, ${shipping}, ${total})`;
+  } catch (err) {
+    console.error("Could not save order", orderId, err);
+    return NextResponse.json({ error: "We couldn't place your order. Please try again." }, { status: 500 });
+  }
 
   const text = [
     `🧾 New order ${orderId}`,
@@ -87,53 +111,29 @@ export async function POST(req: Request) {
     .filter((l) => l !== null)
     .join("\n");
 
-  // ---- Deliver the order ----
-  const deliveries: Promise<boolean>[] = [];
-
+  // ---- Optional instant notifications (failures don't affect the order, which is already saved) ----
   const { TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID, ORDER_WEBHOOK_URL } = process.env;
+  const notifications: Promise<unknown>[] = [];
   if (TELEGRAM_BOT_TOKEN && TELEGRAM_CHAT_ID) {
-    deliveries.push(
+    notifications.push(
       fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ chat_id: TELEGRAM_CHAT_ID, text }),
-      })
-        .then((r) => r.ok)
-        .catch(() => false),
+      }),
     );
   }
   if (ORDER_WEBHOOK_URL) {
-    deliveries.push(
+    notifications.push(
       fetch(ORDER_WEBHOOK_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(order),
-        redirect: "follow",
-      })
-        .then((r) => r.ok)
-        .catch(() => false),
+      }),
     );
   }
-
-  console.log("New order", JSON.stringify(order));
-
-  if (deliveries.length === 0) {
-    if (process.env.NODE_ENV === "production") {
-      console.error("Order received but no TELEGRAM_* or ORDER_WEBHOOK_URL is configured — order only in logs.");
-      return NextResponse.json(
-        { error: `Online ordering isn't set up yet. Please call us to place your order.` },
-        { status: 503 },
-      );
-    }
-    // In development, accept the order so the flow can be tested.
-    return NextResponse.json({ orderId, total });
-  }
-
-  const results = await Promise.all(deliveries);
-  if (!results.some(Boolean)) {
-    console.error("Order delivery failed on every channel", orderId);
-    return NextResponse.json({ error: "We couldn't place your order. Please try again." }, { status: 502 });
-  }
+  const results = await Promise.allSettled(notifications);
+  results.forEach((r) => r.status === "rejected" && console.error("Order notification failed", orderId, r.reason));
 
   return NextResponse.json({ orderId, total });
 }

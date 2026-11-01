@@ -1,5 +1,5 @@
 import Image from "next/image";
-import type { Product } from "@/lib/products";
+import type { Product } from "@/lib/types";
 import ProductArt from "./ProductArt";
 
 export default function ProductImage({

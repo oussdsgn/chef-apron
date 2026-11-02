@@ -2,10 +2,16 @@ import Image from "next/image";
 import Link from "next/link";
 import ProductCard from "@/components/ProductCard";
 import { Collections, Features, NewsletterBanner, Testimonial } from "@/components/Sections";
+import { getT } from "@/lib/i18n/server";
 import { getCategories, getSettings, newArrivals } from "@/lib/store";
 
 export default async function HomePage() {
-  const [arrivals, settings, categories] = await Promise.all([newArrivals(6), getSettings(), getCategories()]);
+  const { locale, t } = await getT();
+  const [arrivals, settings, categories] = await Promise.all([
+    newArrivals(6, locale),
+    getSettings(locale),
+    getCategories(locale),
+  ]);
   const { home } = settings;
   return (
     <>
@@ -32,21 +38,21 @@ export default async function HomePage() {
               <p>{home.arrivalsText}</p>
             </div>
             <Link href="/products" className="underline-link">
-              All products
+              {t("home.allProducts")}
             </Link>
           </div>
           <div className="grid">
             {arrivals.map((p) => (
-              <ProductCard key={p.slug} product={p} />
+              <ProductCard key={p.slug} product={p} locale={locale} />
             ))}
           </div>
         </section>
       )}
 
-      <Testimonial settings={settings} />
-      <Collections settings={settings} categories={categories} />
+      <Testimonial settings={settings} locale={locale} />
+      <Collections settings={settings} categories={categories} locale={locale} />
       <NewsletterBanner settings={settings} />
-      <Features settings={settings} />
+      <Features settings={settings} locale={locale} />
     </>
   );
 }

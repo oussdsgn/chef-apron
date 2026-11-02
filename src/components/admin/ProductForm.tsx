@@ -6,6 +6,7 @@ import { formatPrice, slugify } from "@/lib/format";
 import type { ColorOption, Product } from "@/lib/types";
 import ActionForm from "./ActionForm";
 import ImageField from "./ImageField";
+import TranslationFields from "./TranslationFields";
 
 const ART_OPTIONS: [Product["art"], string][] = [
   ["apron-bib", "Bib apron"],
@@ -201,6 +202,33 @@ export default function ProductForm({
                 </button>
               )}
             </div>
+          </section>
+
+          <section className="panel">
+            <h2 className="panel__title">Translations</h2>
+            <p className="muted small panel__desc">
+              What French and Arabic visitors see. Colour and size names are translated automatically when they&apos;re
+              common ones (Black, Sand, Long…).
+            </p>
+            <TranslationFields
+              prefix="i18n"
+              values={Object.fromEntries(
+                Object.entries(product?.i18n ?? {}).map(([l, v]) => [l, { ...v, details: v?.details?.join("\n") }]),
+              )}
+              fields={[
+                { key: "name", label: "Name", english: product?.name ?? name },
+                { key: "short", label: "Short description", english: product?.short ?? "" },
+                { key: "description", label: "Full description", english: product?.description ?? "", multiline: true, rows: 4 },
+                {
+                  key: "details",
+                  label: "Details & care (one per line)",
+                  english: product?.details.join("\n") ?? "",
+                  multiline: true,
+                  perLine: true,
+                  rows: 4,
+                },
+              ]}
+            />
           </section>
         </div>
 

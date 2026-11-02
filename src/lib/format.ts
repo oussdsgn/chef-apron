@@ -1,11 +1,11 @@
 import type { Settings } from "./types";
 
-/** Formats an amount in Algerian dinars, e.g. "4 500 DA". */
-export function formatPrice(amount: number) {
+/** Formats an amount in Algerian dinars: "4 500 DA" (English/French) or "4 500 د.ج" (Arabic). */
+export function formatPrice(amount: number, locale: string = "en") {
   const n = new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 0 })
     .format(Math.round(amount))
-    .replace(/[  ]/g, " ");
-  return `${n} DA`;
+    .replace(/[\u202f\u00a0]/g, " ");
+  return locale === "ar" ? `${n} د.ج` : `${n} DA`;
 }
 
 export function shippingFor(shipping: Settings["shipping"], subtotal: number, wilayaCode?: number) {

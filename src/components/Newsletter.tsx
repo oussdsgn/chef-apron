@@ -1,8 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import { useStore } from "./StoreProvider";
 
 export default function Newsletter({ dark }: { dark?: boolean }) {
+  const { t } = useStore();
   const [email, setEmail] = useState("");
   const [status, setStatus] = useState<"idle" | "loading" | "done" | "error">("idle");
 
@@ -21,25 +23,25 @@ export default function Newsletter({ dark }: { dark?: boolean }) {
     }
   }
 
-  if (status === "done") return <p className="form-success">Thanks — you&apos;re on the list.</p>;
+  if (status === "done") return <p className="form-success">{t("newsletter.thanks")}</p>;
 
   return (
     <form className={`inline-form ${dark ? "inline-form--dark" : ""}`} onSubmit={submit}>
       <label className="sr-only" htmlFor="newsletter-email">
-        Email address
+        {t("newsletter.label")}
       </label>
       <input
         id="newsletter-email"
         type="email"
         required
-        placeholder="you@restaurant.com"
+        placeholder={t("newsletter.placeholder")}
         value={email}
         onChange={(e) => setEmail(e.target.value)}
       />
       <button className="btn btn--dark btn--small" disabled={status === "loading"}>
-        {status === "loading" ? "…" : "Sign up"}
+        {status === "loading" ? "…" : t("newsletter.signup")}
       </button>
-      {status === "error" && <p className="notice">Please enter a valid email.</p>}
+      {status === "error" && <p className="notice">{t("newsletter.invalid")}</p>}
     </form>
   );
 }

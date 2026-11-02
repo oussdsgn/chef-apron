@@ -1,6 +1,20 @@
 "use client";
 
+import { useStore } from "@/components/StoreProvider";
+import type { MessageKey } from "@/lib/i18n/messages";
+
+// The email subject keeps the English topic so the team always reads the same labels.
+const topics: [string, MessageKey][] = [
+  ["General", "contact.topic.general"],
+  ["Sizing", "contact.topic.sizing"],
+  ["Order", "contact.topic.order"],
+  ["Bulk / restaurant team", "contact.topic.bulk"],
+  ["Custom embroidery", "contact.topic.embroidery"],
+];
+
 export default function ContactForm({ email }: { email: string }) {
+  const { t } = useStore();
+
   function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const data = new FormData(e.currentTarget);
@@ -12,28 +26,28 @@ export default function ContactForm({ email }: { email: string }) {
   return (
     <form className="card-form" onSubmit={submit}>
       <label>
-        Name
+        {t("contact.form.name")}
         <input name="name" required />
       </label>
       <label>
-        Email
-        <input name="email" type="email" required />
+        {t("contact.form.email")}
+        <input name="email" type="email" required dir="ltr" />
       </label>
       <label>
-        Topic
+        {t("contact.form.topic")}
         <select name="topic" defaultValue="General">
-          <option>General</option>
-          <option>Sizing</option>
-          <option>Order</option>
-          <option>Bulk / restaurant team</option>
-          <option>Custom embroidery</option>
+          {topics.map(([value, key]) => (
+            <option key={value} value={value}>
+              {t(key)}
+            </option>
+          ))}
         </select>
       </label>
       <label>
-        Message
+        {t("contact.form.message")}
         <textarea name="message" rows={5} required />
       </label>
-      <button className="btn btn--dark">Send message</button>
+      <button className="btn btn--dark">{t("contact.form.send")}</button>
     </form>
   );
 }

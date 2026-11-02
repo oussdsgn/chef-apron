@@ -1146,3 +1146,57 @@ select.input {
     grid-template-columns: 1fr 1fr;
   }
 }
+
+/* Translations */
+.translations {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.translations__tabs {
+  display: inline-flex;
+  align-self: flex-start;
+  gap: 2px;
+  padding: 3px;
+  border-radius: 10px;
+  background: var(--a-bg);
+}
+.translations__tabs button {
+  padding: 6px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  color: var(--a-ink-2);
+}
+.translations__tabs button.is-active {
+  background: var(--a-panel);
+  color: var(--a-ink);
+  font-weight: 500;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+}
+.translations__panel {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.translations__panel[hidden] {
+  display: none;
+}
+.translations__panel[lang="ar"] .input {
+  font-family: var(--font-arabic), var(--font-sans);
+}
+.translations__panel .input::placeholder {
+  color: #a8a59d;
+}
+.tr-block {
+  border: 1px dashed var(--a-line);
+  border-radius: 10px;
+  padding: 12px 14px;
+}
+.tr-block summary {
+  cursor: pointer;
+  font-weight: 500;
+  font-size: 13.5px;
+}
+.tr-block[open] summary {
+  margin-bottom: 12px;
+}

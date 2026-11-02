@@ -9,6 +9,28 @@ import { contentGroups, settingsGroups, type SectionKey } from "@/lib/settings-f
 import { CATALOG_TAG, SETTINGS_TAG, loadSettings } from "@/lib/store";
 import { ORDER_STATUSES, type ColorOption, type OrderStatus } from "@/lib/types";
 import { saveImage } from "@/lib/uploads";
+import { TRANSLATED } from "@/lib/i18n/config";
+import { TRANSLATABLE_SETTINGS } from "@/lib/i18n/localize";
+
+/** Reads `${prefix}.fr.key` / `${prefix}.ar.key` inputs. Empty values are left out (they fall back automatically). */
+function readTranslations(fd: FormData, prefix: string, keys: string[], listKeys: string[] = []) {
+  const out: Record<string, Record<string, string | string[]>> = {};
+  for (const l of TRANSLATED) {
+    const entry: Record<string, string | string[]> = {};
+    for (const key of keys) {
+      const raw = String(fd.get(`${prefix}.${l}.${key}`) ?? "").trim().slice(0, 20000);
+      if (!raw) continue;
+      entry[key] = listKeys.includes(key)
+        ? raw
+            .split("\n")
+            .map((x) => x.trim())
+            .filter(Boolean)
+        : raw;
+    }
+    if (Object.keys(entry).length) out[l] = entry;
+  }
+  return out;
+}
 
 export type ActionState = { ok: boolean; message: string } | null;
 
@@ -120,6 +142,7 @@ export async function saveProduct(_prev: ActionState, fd: FormData): Promise<Act
     active: fd.get("active") === "on",
     inStock: fd.get("inStock") === "on",
     sort,
+    i18n: readTranslations(fd, "i18n", ["name", "short", "description", "details"], ["details"]),
     updatedAt: new Date(),
   };
 
@@ -127,7 +150,8 @@ export async function saveProduct(_prev: ActionState, fd: FormData): Promise<Act
   if (id) {
     const ref = products.doc(id);
     if (!(await ref.get()).exists) return { ok: false, message: "This product no longer exists." };
-    await ref.set(values, { merge: true });
+    // update() replaces each listed field as a whole, so cleared translations are really removed.
+    await ref.update(values);
   } else {
     savedId = (await products.add({ ...values, createdAt: new Date() })).id;
   }
@@ -201,10 +225,11 @@ export async function saveCategory(_prev: ActionState, fd: FormData): Promise<Ac
     blurb: str(fd, "blurb", 500),
     image: str(fd, "image", 1000) || null,
     sort: int(fd, "sort") ?? 0,
+    i18n: readTranslations(fd, "i18n", ["name", "title", "blurb"]),
   };
 
   if (original && original === slug) {
-    await categories.doc(slug).set(values, { merge: true });
+    await categories.doc(slug).set(values, { mergeFields: Object.keys(values) });
   } else {
     if ((await categories.doc(slug).get()).exists) return { ok: false, message: `The address “${slug}” is already used.` };
     if (original) {
@@ -285,7 +310,21 @@ export async function saveSettings(_prev: ActionState, fd: FormData): Promise<Ac
     }
   }
 
-  await (await db()).collection(COL.settings).doc("site").set({ [section]: next }, { merge: true });
+  // Translations of this section's texts, stored as translations.<lang>["section.key"].
+  const update: Record<string, unknown> = { [section]: next };
+  if (section in TRANSLATABLE_SETTINGS) {
+    const keys = TRANSLATABLE_SETTINGS[section as keyof typeof TRANSLATABLE_SETTINGS];
+    const read = readTranslations(fd, "tr", keys.map((k) => `${section}.${k}`));
+    for (const l of TRANSLATED) {
+      const existing = { ...(current.translations?.[l] ?? {}) };
+      for (const k of keys) delete existing[`${section}.${k}`];
+      update.translations = {
+        ...(update.translations as object),
+        [l]: { ...existing, ...((read[l] as Record<string, string>) ?? {}) },
+      };
+    }
+  }
+  await (await db()).collection(COL.settings).doc("site").set(update, { mergeFields: Object.keys(update) });
   refreshStore(SETTINGS_TAG);
   revalidatePath("/admin", "layout");
   return { ok: true, message: `${group.title} saved` };

@@ -2,19 +2,22 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import ProductCard from "@/components/ProductCard";
+import { getT } from "@/lib/i18n/server";
 import { getCategories, getCategory, productsIn } from "@/lib/store";
 
 type Params = { params: Promise<{ slug: string }> };
 
 export async function generateMetadata({ params }: Params): Promise<Metadata> {
-  const category = await getCategory((await params).slug);
+  const { locale } = await getT();
+  const category = await getCategory((await params).slug, locale);
   return category ? { title: category.title, description: category.blurb } : {};
 }
 
 export default async function CollectionPage({ params }: Params) {
-  const category = await getCategory((await params).slug);
+  const { locale, t } = await getT();
+  const category = await getCategory((await params).slug, locale);
   if (!category) notFound();
-  const [list, categories] = await Promise.all([productsIn(category.slug), getCategories()]);
+  const [list, categories] = await Promise.all([productsIn(category.slug, locale), getCategories(locale)]);
 
   return (
     <section className="container section section--tight">
@@ -25,7 +28,7 @@ export default async function CollectionPage({ params }: Params) {
       <div className="toolbar">
         <div className="chips">
           <Link href="/products" className="chip">
-            All
+            {t("shop.all")}
           </Link>
           {categories.map((c) => (
             <Link key={c.slug} href={`/collections/${c.slug}`} className={`chip ${c.slug === category.slug ? "is-selected" : ""}`}>
@@ -33,11 +36,11 @@ export default async function CollectionPage({ params }: Params) {
             </Link>
           ))}
         </div>
-        <span className="muted">{list.length} products</span>
+        <span className="muted">{t("shop.products", { count: list.length })}</span>
       </div>
       <div className="grid">
         {list.map((p) => (
-          <ProductCard key={p.slug} product={p} />
+          <ProductCard key={p.slug} product={p} locale={locale} />
         ))}
       </div>
     </section>

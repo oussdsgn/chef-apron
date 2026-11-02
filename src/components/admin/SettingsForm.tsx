@@ -5,8 +5,34 @@ import type { FormGroup } from "@/lib/settings-fields";
 import { wilayas } from "@/lib/wilayas";
 import ActionForm from "./ActionForm";
 import ImageField from "./ImageField";
+import TranslationFields from "./TranslationFields";
+import { TRANSLATABLE_SETTINGS } from "@/lib/i18n/localize";
+import type { Settings } from "@/lib/types";
 
-export default function SettingsForm({ group, values }: { group: FormGroup; values: Record<string, unknown> }) {
+export default function SettingsForm({
+  group,
+  values,
+  translations,
+}: {
+  group: FormGroup;
+  values: Record<string, unknown>;
+  translations?: Settings["translations"];
+}) {
+  const translatable = (TRANSLATABLE_SETTINGS as Record<string, string[]>)[group.section] ?? [];
+  const asText = (key: string) => {
+    const v = values[key];
+    return Array.isArray(v) ? (v as { title: string; text: string }[]).map((x) => `${x.title} | ${x.text}`).join("\n") : String(v ?? "");
+  };
+  const trFields = group.fields
+    .filter((f) => translatable.includes(f.key))
+    .map((f) => ({
+      key: `${group.section}.${f.key}`,
+      label: f.label,
+      english: asText(f.key),
+      multiline: f.type !== "text",
+      perLine: f.type === "values",
+      rows: f.type === "longtext" ? 8 : 3,
+    }));
   return (
     <section className="panel" id={group.section}>
       <h2 className="panel__title">{group.title}</h2>
@@ -59,6 +85,12 @@ export default function SettingsForm({ group, values }: { group: FormGroup; valu
             </label>
           );
         })}
+        {trFields.length > 0 && (
+          <details className="tr-block">
+            <summary>French &amp; Arabic translations</summary>
+            <TranslationFields prefix="tr" fields={trFields} values={translations} />
+          </details>
+        )}
       </ActionForm>
     </section>
   );

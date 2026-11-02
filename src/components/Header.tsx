@@ -6,16 +6,17 @@ import { useEffect, useState } from "react";
 import { useCart } from "./CartProvider";
 import { useStore } from "./StoreProvider";
 import { BagIcon, CloseIcon, MenuIcon, SearchIcon } from "./Icons";
+import LanguageSwitcher from "./LanguageSwitcher";
 
 
 export default function Header() {
   const { count, open } = useCart();
-  const { categories, settings } = useStore();
+  const { categories, settings, t } = useStore();
   const nav = [
-    { href: "/products", label: "Shop" },
+    { href: "/products", label: t("nav.shop") },
     ...categories.map((c) => ({ href: `/collections/${c.slug}`, label: c.name })),
-    { href: "/about", label: "About" },
-    { href: "/contact", label: "Contact" },
+    { href: "/about", label: t("nav.about") },
+    { href: "/contact", label: t("nav.contact") },
   ];
   const [menuOpen, setMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
@@ -46,22 +47,23 @@ export default function Header() {
         </nav>
         <button
           className="icon-btn header__menu-btn"
-          aria-label={menuOpen ? "Close menu" : "Open menu"}
+          aria-label={menuOpen ? t("nav.closeMenu") : t("nav.openMenu")}
           aria-expanded={menuOpen}
           onClick={() => setMenuOpen((v) => !v)}
         >
           {menuOpen ? <CloseIcon /> : <MenuIcon />}
         </button>
 
-        <Link href="/" className="wordmark" aria-label={`${settings.store.name} home`}>
+        <Link href="/" className="wordmark" aria-label={t("nav.home", { store: settings.store.name })}>
           {settings.store.name.toUpperCase()}
         </Link>
 
         <div className="header__actions">
-          <Link href="/search" className="icon-btn" aria-label="Search">
+          <LanguageSwitcher />
+          <Link href="/search" className="icon-btn" aria-label={t("nav.search")}>
             <SearchIcon />
           </Link>
-          <button className="icon-btn cart-btn" onClick={open} aria-label={`Open cart, ${count} items`}>
+          <button className="icon-btn cart-btn" onClick={open} aria-label={t("nav.cart", { count })}>
             <BagIcon />
             {count > 0 && <span className="cart-btn__count">{count}</span>}
           </button>

@@ -22,7 +22,7 @@ export default function ProductImage({
       <Image
         key={src}
         src={src}
-        alt={option ? `${product.name} in ${option.name}` : product.name}
+        alt={option ? `${product.name} – ${option.label ?? option.name}` : product.name}
         fill
         sizes={sizes}
         priority={priority}

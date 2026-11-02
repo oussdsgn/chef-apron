@@ -1,4 +1,8 @@
 import type { ArtKind } from "@/components/ProductArt";
+import type { TranslatedLocale } from "./i18n/config";
+
+/** Per-language overrides entered in the dashboard. Empty fields fall back to built-in translations, then English. */
+export type Translations<T> = Partial<Record<TranslatedLocale, Partial<T>>>;
 
 export type CategorySlug = string;
 
@@ -9,6 +13,7 @@ export type Category = {
   blurb: string;
   image?: string;
   sort: number;
+  i18n?: Translations<{ name: string; title: string; blurb: string }>;
 };
 
 export type ColorOption = {
@@ -16,7 +21,11 @@ export type ColorOption = {
   hex: string;
   /** Photo of the product in this color. Falls back to the product image. */
   image?: string;
+  /** Display name in the visitor's language (set when localizing; `name` stays the canonical English value). */
+  label?: string;
 };
+
+export type ProductText = { name: string; short: string; description: string; details: string[] };
 
 export type Product = {
   id: string;
@@ -38,6 +47,9 @@ export type Product = {
   /** Main photo URL. Without one, an illustration is shown. */
   image?: string;
   sort: number;
+  i18n?: Translations<ProductText>;
+  /** Display labels for sizes in the visitor's language (set when localizing). */
+  sizeLabels?: Record<string, string>;
 };
 
 export type OrderStatus = "new" | "confirmed" | "shipped" | "delivered" | "cancelled" | "returned";
@@ -124,4 +136,6 @@ export type Settings = {
     returns: string;
     privacy: string;
   };
+  /** Dashboard translations of the texts above, keyed "section.field" (e.g. "home.heroTitle"). */
+  translations?: Partial<Record<TranslatedLocale, Record<string, string>>>;
 };

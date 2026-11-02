@@ -1,11 +1,24 @@
-export const wilayas: { code: number; name: string }[] = [
-  "Adrar", "Chlef", "Laghouat", "Oum El Bouaghi", "Batna", "Béjaïa", "Biskra", "Béchar", "Blida", "Bouira",
-  "Tamanrasset", "Tébessa", "Tlemcen", "Tiaret", "Tizi Ouzou", "Alger", "Djelfa", "Jijel", "Sétif", "Saïda",
-  "Skikda", "Sidi Bel Abbès", "Annaba", "Guelma", "Constantine", "Médéa", "Mostaganem", "M'Sila", "Mascara", "Ouargla",
-  "Oran", "El Bayadh", "Illizi", "Bordj Bou Arréridj", "Boumerdès", "El Tarf", "Tindouf", "Tissemsilt", "El Oued", "Khenchela",
-  "Souk Ahras", "Tipaza", "Mila", "Aïn Defla", "Naâma", "Aïn Témouchent", "Ghardaïa", "Relizane", "Timimoun", "Bordj Badji Mokhtar",
-  "Ouled Djellal", "Béni Abbès", "In Salah", "In Guezzam", "Touggourt", "Djanet", "El M'Ghair", "El Meniaa",
-].map((name, i) => ({ code: i + 1, name }));
+const names: [string, string][] = [
+  ["Adrar", "أدرار"], ["Chlef", "الشلف"], ["Laghouat", "الأغواط"], ["Oum El Bouaghi", "أم البواقي"], ["Batna", "باتنة"],
+  ["Béjaïa", "بجاية"], ["Biskra", "بسكرة"], ["Béchar", "بشار"], ["Blida", "البليدة"], ["Bouira", "البويرة"],
+  ["Tamanrasset", "تمنراست"], ["Tébessa", "تبسة"], ["Tlemcen", "تلمسان"], ["Tiaret", "تيارت"], ["Tizi Ouzou", "تيزي وزو"],
+  ["Alger", "الجزائر"], ["Djelfa", "الجلفة"], ["Jijel", "جيجل"], ["Sétif", "سطيف"], ["Saïda", "سعيدة"],
+  ["Skikda", "سكيكدة"], ["Sidi Bel Abbès", "سيدي بلعباس"], ["Annaba", "عنابة"], ["Guelma", "قالمة"], ["Constantine", "قسنطينة"],
+  ["Médéa", "المدية"], ["Mostaganem", "مستغانم"], ["M'Sila", "المسيلة"], ["Mascara", "معسكر"], ["Ouargla", "ورقلة"],
+  ["Oran", "وهران"], ["El Bayadh", "البيض"], ["Illizi", "إليزي"], ["Bordj Bou Arréridj", "برج بوعريريج"], ["Boumerdès", "بومرداس"],
+  ["El Tarf", "الطارف"], ["Tindouf", "تندوف"], ["Tissemsilt", "تيسمسيلت"], ["El Oued", "الوادي"], ["Khenchela", "خنشلة"],
+  ["Souk Ahras", "سوق أهراس"], ["Tipaza", "تيبازة"], ["Mila", "ميلة"], ["Aïn Defla", "عين الدفلى"], ["Naâma", "النعامة"],
+  ["Aïn Témouchent", "عين تموشنت"], ["Ghardaïa", "غرداية"], ["Relizane", "غليزان"], ["Timimoun", "تيميمون"], ["Bordj Badji Mokhtar", "برج باجي مختار"],
+  ["Ouled Djellal", "أولاد جلال"], ["Béni Abbès", "بني عباس"], ["In Salah", "عين صالح"], ["In Guezzam", "عين قزام"], ["Touggourt", "تقرت"],
+  ["Djanet", "جانت"], ["El M'Ghair", "المغير"], ["El Meniaa", "المنيعة"],
+];
+
+/** The 58 wilayas. `name` (Latin) is what's saved on orders; `nameAr` is shown to Arabic-speaking visitors. */
+export const wilayas: { code: number; name: string; nameAr: string }[] = names.map(([name, nameAr], i) => ({
+  code: i + 1,
+  name,
+  nameAr,
+}));
 
 export function getWilaya(code: number) {
   return wilayas.find((w) => w.code === code);

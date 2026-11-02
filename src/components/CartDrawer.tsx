@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { useEffect } from "react";
-import { formatPrice } from "@/lib/format";
 import { useStore } from "./StoreProvider";
 import { lineKey, useCart } from "./CartProvider";
 import { CloseIcon } from "./Icons";
@@ -11,7 +10,7 @@ import CheckoutButton from "./CheckoutButton";
 
 export function CartLines({ compact }: { compact?: boolean }) {
   const { lines, setQuantity, remove } = useCart();
-  const { getProduct } = useStore();
+  const { getProduct, t, price } = useStore();
   return (
     <ul className={`cart-lines ${compact ? "cart-lines--compact" : ""}`}>
       {lines.map((line) => {
@@ -29,24 +28,24 @@ export function CartLines({ compact }: { compact?: boolean }) {
                 <Link href={`/products/${product.slug}`} className="cart-line__name">
                   {product.name}
                 </Link>
-                <span>{formatPrice(product.price * line.quantity)}</span>
+                <span>{price(product.price * line.quantity)}</span>
               </div>
               <span className="muted">
-                {line.color}
-                {line.size ? ` · ${line.size}` : ""}
+                {color?.label ?? line.color}
+                {line.size ? ` · ${product.sizeLabels?.[line.size] ?? line.size}` : ""}
               </span>
               <div className="cart-line__controls">
                 <div className="qty">
-                  <button onClick={() => setQuantity(key, line.quantity - 1)} aria-label="Decrease quantity">
+                  <button onClick={() => setQuantity(key, line.quantity - 1)} aria-label={t("pdp.decrease")}>
                     −
                   </button>
                   <span aria-live="polite">{line.quantity}</span>
-                  <button onClick={() => setQuantity(key, line.quantity + 1)} aria-label="Increase quantity">
+                  <button onClick={() => setQuantity(key, line.quantity + 1)} aria-label={t("pdp.increase")}>
                     +
                   </button>
                 </div>
                 <button className="link-btn" onClick={() => remove(key)}>
-                  Remove
+                  {t("cart.remove")}
                 </button>
               </div>
             </div>
@@ -59,7 +58,7 @@ export function CartLines({ compact }: { compact?: boolean }) {
 
 export function ShippingProgress() {
   const { subtotal } = useCart();
-  const { settings } = useStore();
+  const { settings, t, price } = useStore();
   const threshold = settings.shipping.freeThreshold;
   const remaining = threshold - subtotal;
   if (threshold <= 0) return null;
@@ -67,13 +66,19 @@ export function ShippingProgress() {
   return (
     <div className="ship-progress">
       <p>
-        {remaining > 0 ? (
-          <>
-            You&apos;re <strong>{formatPrice(remaining)}</strong> away from free shipping
-          </>
-        ) : (
-          <>You&apos;ve unlocked free shipping</>
-        )}
+        {remaining > 0
+          ? (() => {
+              // Bold the amount wherever it falls in the translated sentence.
+              const [before, after] = t("cart.away", { amount: "\u0000" }).split("\u0000");
+              return (
+                <>
+                  {before}
+                  <strong>{price(remaining)}</strong>
+                  {after}
+                </>
+              );
+            })()
+          : t("cart.unlocked")}
       </p>
       <div className="ship-progress__bar">
         <span style={{ width: `${pct}%` }} />
@@ -84,6 +89,7 @@ export function ShippingProgress() {
 
 export default function CartDrawer() {
   const { isOpen, close, lines, subtotal, count } = useCart();
+  const { t, price } = useStore();
 
   useEffect(() => {
     if (!isOpen) return;
@@ -99,18 +105,20 @@ export default function CartDrawer() {
   return (
     <div className={`drawer ${isOpen ? "is-open" : ""}`} aria-hidden={!isOpen}>
       <div className="drawer__backdrop" onClick={close} />
-      <aside className="drawer__panel" role="dialog" aria-modal="true" aria-label="Shopping cart">
+      <aside className="drawer__panel" role="dialog" aria-modal="true" aria-label={t("cart.title")}>
         <div className="drawer__head">
-          <h2>Your cart {count > 0 && <span className="muted">({count})</span>}</h2>
-          <button className="icon-btn" onClick={close} aria-label="Close cart">
+          <h2>
+            {t("cart.title")} {count > 0 && <span className="muted">({count})</span>}
+          </h2>
+          <button className="icon-btn" onClick={close} aria-label={t("cart.close")}>
             <CloseIcon />
           </button>
         </div>
         {lines.length === 0 ? (
           <div className="drawer__empty">
-            <p>Your cart is empty.</p>
+            <p>{t("cart.empty")}</p>
             <Link href="/products" className="btn btn--dark" onClick={close}>
-              Shop collection
+              {t("cart.shopCollection")}
             </Link>
           </div>
         ) : (
@@ -121,13 +129,13 @@ export default function CartDrawer() {
             </div>
             <div className="drawer__foot">
               <div className="row-between">
-                <span>Subtotal</span>
-                <strong>{formatPrice(subtotal)}</strong>
+                <span>{t("cart.subtotal")}</span>
+                <strong>{price(subtotal)}</strong>
               </div>
-              <p className="muted small">Delivery fee calculated at checkout. Pay cash on delivery.</p>
+              <p className="muted small">{t("cart.note")}</p>
               <CheckoutButton />
               <Link href="/cart" className="btn btn--ghost btn--block" onClick={close}>
-                View cart
+                {t("cart.view")}
               </Link>
             </div>
           </>

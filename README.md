@@ -25,6 +25,19 @@ Prices are in Algerian dinars (DA) and customers pay cash on delivery.
 
 Changes made in the dashboard go live on the store immediately.
 
+## Languages
+
+The shop is available in **English, French and Arabic** (Arabic is shown right-to-left). Visitors switch with the
+globe button in the header; their choice is remembered, and first-time visitors get their browser's language.
+
+- **Fixed texts** (buttons, checkout, menus) are in `src/lib/i18n/messages.ts`.
+- **Your content** (products, collections, home/About/policy texts) has French and Arabic fields in the dashboard:
+  *Translations* on each product and collection, and *French & Arabic translations* under each section of
+  Pages & content and Settings. Empty fields use the built-in translation of the starter content
+  (`src/lib/i18n/content.ts`), or the English text if there is none.
+- Orders, colours and sizes are always saved in English, so the dashboard reads the same whatever language the
+  customer used. The dashboard itself stays in English.
+
 ## Set up
 
 ### 1. Create the Firebase project

@@ -1,25 +1,27 @@
 import type { Metadata } from "next";
 import ContactForm from "./ContactForm";
+import { getT } from "@/lib/i18n/server";
 import { getSettings } from "@/lib/store";
 
-export const metadata: Metadata = { title: "Contact" };
+export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await getT();
+  return { title: t("contact.eyebrow") };
+}
 
 export default async function ContactPage() {
-  const { store } = await getSettings();
+  const { locale, t } = await getT();
+  const { store } = await getSettings(locale);
   return (
     <section className="container section section--tight">
       <div className="split">
         <div className="prose">
-          <span className="eyebrow">Contact</span>
-          <h1>We&apos;re here to help.</h1>
-          <p>
-            Questions about sizing, bulk orders for your restaurant team, or custom embroidery? Send us a message and
-            we&apos;ll get back to you within one business day.
-          </p>
+          <span className="eyebrow">{t("contact.eyebrow")}</span>
+          <h1>{t("contact.title")}</h1>
+          <p>{t("contact.intro")}</p>
           <dl className="contact-list">
             {store.email && (
               <>
-                <dt>Email</dt>
+                <dt>{t("contact.email")}</dt>
                 <dd>
                   <a href={`mailto:${store.email}`}>{store.email}</a>
                 </dd>
@@ -27,15 +29,17 @@ export default async function ContactPage() {
             )}
             {store.phone && (
               <>
-                <dt>Phone</dt>
+                <dt>{t("contact.phone")}</dt>
                 <dd>
-                  <a href={`tel:${store.phone.replace(/[^+\d]/g, "")}`}>{store.phone}</a>
+                  <a href={`tel:${store.phone.replace(/[^+\d]/g, "")}`} dir="ltr">
+                    {store.phone}
+                  </a>
                 </dd>
               </>
             )}
             {store.address && (
               <>
-                <dt>Address</dt>
+                <dt>{t("contact.address")}</dt>
                 <dd>
                   {store.address.split("\n").map((l) => (
                     <span key={l} className="block">

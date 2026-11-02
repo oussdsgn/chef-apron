@@ -22,7 +22,12 @@ export default async function ContentPage() {
         ))}
       </nav>
       {contentGroups.map((g) => (
-        <SettingsForm key={g.section} group={g} values={settings[g.section] as Record<string, unknown>} />
+        <SettingsForm
+          key={g.section}
+          group={g}
+          values={settings[g.section] as Record<string, unknown>}
+          translations={settings.translations}
+        />
       ))}
     </>
   );

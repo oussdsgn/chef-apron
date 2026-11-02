@@ -1,23 +1,26 @@
 import Image from "next/image";
 import Link from "next/link";
 import { formatPrice } from "@/lib/format";
+import type { Locale } from "@/lib/i18n/config";
+import { translator } from "@/lib/i18n/messages";
 import type { Category, Settings } from "@/lib/types";
 import { ChatIcon, LockIcon, ReturnIcon, StarIcon, TruckIcon } from "./Icons";
 import Newsletter from "./Newsletter";
 
-export function Features({ settings }: { settings: Settings }) {
+export function Features({ settings, locale = "en" }: { settings: Settings; locale?: Locale }) {
+  const t = translator(locale);
   const items = [
     {
       icon: <TruckIcon />,
-      title: "Delivery to 58 wilayas",
+      title: t("features.delivery"),
       text:
         settings.shipping.freeThreshold > 0
-          ? `Free over ${formatPrice(settings.shipping.freeThreshold)}`
-          : "Home delivery, everywhere",
+          ? t("features.freeOver", { amount: formatPrice(settings.shipping.freeThreshold, locale) })
+          : t("features.homeDelivery"),
     },
-    { icon: <ReturnIcon />, title: "30-day returns", text: "Unworn items, no questions" },
-    { icon: <ChatIcon />, title: "Chef support", text: "Sizing help by phone & email" },
-    { icon: <LockIcon />, title: "Cash on delivery", text: "Pay when your order arrives" },
+    { icon: <ReturnIcon />, title: t("features.returns"), text: t("features.returnsText") },
+    { icon: <ChatIcon />, title: t("features.support"), text: t("features.supportText") },
+    { icon: <LockIcon />, title: t("features.cod"), text: t("features.codText") },
   ];
   return (
     <section className="container features">
@@ -34,13 +37,13 @@ export function Features({ settings }: { settings: Settings }) {
   );
 }
 
-export function Testimonial({ settings }: { settings: Settings }) {
+export function Testimonial({ settings, locale = "en" }: { settings: Settings; locale?: Locale }) {
   const { testimonialQuote, testimonialAuthor } = settings.home;
   if (!testimonialQuote) return null;
   return (
     <section className="testimonial">
       <div className="container testimonial__inner">
-        <div className="stars" aria-label="5 out of 5 stars">
+        <div className="stars" aria-label={translator(locale)("testimonial.stars")}>
           {Array.from({ length: 5 }).map((_, i) => (
             <StarIcon key={i} />
           ))}
@@ -52,7 +55,16 @@ export function Testimonial({ settings }: { settings: Settings }) {
   );
 }
 
-export function Collections({ settings, categories }: { settings: Settings; categories: Category[] }) {
+export function Collections({
+  settings,
+  categories,
+  locale = "en",
+}: {
+  settings: Settings;
+  categories: Category[];
+  locale?: Locale;
+}) {
+  const t = translator(locale);
   if (categories.length === 0) return null;
   const [first, ...rest] = categories;
   const tile = (c: Category, big?: boolean) => (
@@ -61,7 +73,7 @@ export function Collections({ settings, categories }: { settings: Settings; cate
         <Image src={c.image} alt="" fill sizes="(max-width: 900px) 100vw, 50vw" className="collection-tile__photo" />
       )}
       <h3>{c.title}</h3>
-      <span className="collection-tile__cta">Shop now →</span>
+      <span className="collection-tile__cta">{t("collections.shopNow")}</span>
     </Link>
   );
   return (

@@ -2,14 +2,16 @@ import type { Metadata } from "next";
 import ActionForm from "@/components/admin/ActionForm";
 import ConfirmButton from "@/components/admin/ConfirmButton";
 import ImageField from "@/components/admin/ImageField";
+import TranslationFields from "@/components/admin/TranslationFields";
 import { PageHead } from "@/components/admin/ui";
 import { deleteCategory, saveCategory } from "@/app/admin/actions";
 import { COL, db } from "@/lib/db";
 import { listAllCategories } from "@/lib/store";
+import type { Category } from "@/lib/types";
 
 export const metadata: Metadata = { title: "Collections" };
 
-type Row = { slug: string; name: string; title: string; blurb: string; image: string | null; sort: number; count: number };
+type Row = Omit<Category, "image"> & { image: string | null; count: number };
 
 function Fields({ c }: { c?: Row }) {
   return (
@@ -42,6 +44,15 @@ function Fields({ c }: { c?: Row }) {
           <span className="field__label">Position</span>
           <input name="sort" className="input" inputMode="numeric" defaultValue={c?.sort ?? 0} />
         </label>
+        <TranslationFields
+          prefix="i18n"
+          values={c?.i18n as Record<string, Record<string, string>> | undefined}
+          fields={[
+            { key: "name", label: "Menu name", english: c?.name ?? "" },
+            { key: "title", label: "Page title", english: c?.title ?? "" },
+            { key: "blurb", label: "Description", english: c?.blurb ?? "", multiline: true, rows: 2 },
+          ]}
+        />
       </div>
     </div>
   );

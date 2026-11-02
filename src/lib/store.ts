@@ -3,6 +3,8 @@ import type { DocumentSnapshot } from "firebase-admin/firestore";
 import { unstable_cache } from "next/cache";
 import { COL, db, toIso } from "./db";
 import { defaultSettings, seedCategories, seedProducts } from "./seed";
+import type { Locale } from "./i18n/config";
+import { localizeCategory, localizeProduct, localizeSettings } from "./i18n/localize";
 import type { Category, Order, Product, Settings } from "./types";
 
 export const CATALOG_TAG = "catalog";
@@ -29,6 +31,7 @@ export function toProduct(doc: DocumentSnapshot): Product {
     active: d.active !== false,
     inStock: d.inStock !== false,
     sort: Number(d.sort ?? 0),
+    ...(d.i18n ? { i18n: d.i18n } : {}),
   };
 }
 
@@ -41,6 +44,7 @@ function toCategory(doc: DocumentSnapshot): Category {
     blurb: d.blurb ?? "",
     image: d.image ?? undefined,
     sort: Number(d.sort ?? 0),
+    ...(d.i18n ? { i18n: d.i18n } : {}),
   };
 }
 
@@ -100,22 +104,30 @@ const fallbackProducts = (): Product[] =>
   seedProducts.map((p, i) => ({ ...p, id: p.slug, isNew: p.isNew ?? false, active: true, inStock: true, sort: i }));
 const fallbackCategories = (): Category[] => seedCategories.map((c, i) => ({ ...c, sort: i }));
 
-export async function getProducts(): Promise<Product[]> {
+/**
+ * Products visible in the shop. Pass the visitor's locale to get translated names and texts;
+ * without one you get the canonical English data (used for orders, so colour/size values stay stable).
+ */
+export async function getProducts(locale?: Locale): Promise<Product[]> {
+  let list: Product[];
   try {
-    return await cachedProducts();
+    list = await cachedProducts();
   } catch (err) {
     logFallback("products", err);
-    return fallbackProducts();
+    list = fallbackProducts();
   }
+  return locale ? list.map((p) => localizeProduct(p, locale)) : list;
 }
 
-export async function getCategories(): Promise<Category[]> {
+export async function getCategories(locale?: Locale): Promise<Category[]> {
+  let list: Category[];
   try {
-    return await cachedCategories();
+    list = await cachedCategories();
   } catch (err) {
     logFallback("collections", err);
-    return fallbackCategories();
+    list = fallbackCategories();
   }
+  return locale ? list.map((c) => localizeCategory(c, locale)) : list;
 }
 
 function mergeSettings(saved: Partial<Settings> | undefined): Settings {
@@ -126,6 +138,7 @@ function mergeSettings(saved: Partial<Settings> | undefined): Settings {
     home: { ...defaultSettings.home, ...s.home },
     about: { ...defaultSettings.about, ...s.about },
     pages: { ...defaultSettings.pages, ...s.pages },
+    ...(s.translations ? { translations: s.translations } : {}),
   };
 }
 
@@ -136,36 +149,42 @@ export async function loadSettings(): Promise<Settings> {
 
 const cachedSettings = unstable_cache(loadSettings, ["settings-fs-v1"], { tags: [SETTINGS_TAG] });
 
-export async function getSettings(): Promise<Settings> {
+export async function getSettings(locale?: Locale): Promise<Settings> {
+  let settings: Settings;
   try {
-    return await cachedSettings();
+    settings = await cachedSettings();
   } catch (err) {
     logFallback("settings", err);
-    return mergeSettings(undefined);
+    settings = mergeSettings(undefined);
   }
+  return locale ? localizeSettings(settings, locale) : settings;
 }
 
-export async function getProduct(slug: string) {
-  return (await getProducts()).find((p) => p.slug === slug);
+export async function getProduct(slug: string, locale?: Locale) {
+  return (await getProducts(locale)).find((p) => p.slug === slug);
 }
 
-export async function getCategory(slug: string) {
-  return (await getCategories()).find((c) => c.slug === slug);
+export async function getCategory(slug: string, locale?: Locale) {
+  return (await getCategories(locale)).find((c) => c.slug === slug);
 }
 
-export async function productsIn(category: string) {
-  return (await getProducts()).filter((p) => p.category === category);
+export async function productsIn(category: string, locale?: Locale) {
+  return (await getProducts(locale)).filter((p) => p.category === category);
 }
 
-export async function newArrivals(limit = 6) {
-  return (await getProducts()).filter((p) => p.isNew).slice(0, limit);
+export async function newArrivals(limit = 6, locale?: Locale) {
+  return (await getProducts(locale)).filter((p) => p.isNew).slice(0, limit);
 }
 
-export async function searchProducts(query: string) {
+/** Searches in the visitor's language and in English, so "tablier" and "apron" both work. */
+export async function searchProducts(query: string, locale: Locale = "en") {
   const q = query.trim().toLowerCase();
   if (!q) return [];
-  return (await getProducts()).filter((p) =>
-    [p.name, p.short, p.description, p.category].some((s) => s.toLowerCase().includes(q)),
+  const [english, localized] = await Promise.all([getProducts(), getProducts(locale)]);
+  return localized.filter((p, i) =>
+    [p.name, p.short, p.description, english[i].name, english[i].short, english[i].description].some((s) =>
+      s.toLowerCase().includes(q),
+    ),
   );
 }
 

@@ -1,13 +1,15 @@
 import Link from "next/link";
+import { getT } from "@/lib/i18n/server";
 
-export default function StoreNotFound() {
+export default async function StoreNotFound() {
+  const { t } = await getT();
   return (
     <section className="container section">
       <div className="empty">
-        <h1>Page not found</h1>
-        <p>This page has been taken off the menu.</p>
+        <h1>{t("notFound.title")}</h1>
+        <p>{t("notFound.text")}</p>
         <Link href="/" className="btn btn--dark">
-          Back to home
+          {t("notFound.back")}
         </Link>
       </div>
     </section>

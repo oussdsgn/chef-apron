@@ -1,6 +1,10 @@
 import type { Metadata } from "next";
+import { getT } from "@/lib/i18n/server";
 
-export const metadata: Metadata = { title: "Size guide" };
+export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await getT();
+  return { title: t("size.title") };
+}
 
 const rows = [
   ["XS", "84–89", "71–76", "33–35"],
@@ -11,40 +15,39 @@ const rows = [
   ["XXL", "120–127", "106–113", "48–50"],
 ];
 
-export default function SizeGuidePage() {
+export default async function SizeGuidePage() {
+  const { t } = await getT();
   return (
     <section className="container section section--tight prose prose--narrow">
-      <h1>Size guide</h1>
-      <p>
-        Our jackets and pants are cut with room to move. If you&apos;re between sizes, size up for layering or size down
-        for a closer fit. Measurements are body measurements in centimetres.
-      </p>
+      <h1>{t("size.title")}</h1>
+      <p>{t("size.intro")}</p>
       <div className="table-wrap">
         <table>
           <thead>
             <tr>
-              <th>Size</th>
-              <th>Chest (cm)</th>
-              <th>Waist (cm)</th>
-              <th>EU</th>
+              <th>{t("size.size")}</th>
+              <th>{t("size.chest")}</th>
+              <th>{t("size.waist")}</th>
+              <th>{t("size.eu")}</th>
             </tr>
           </thead>
           <tbody>
             {rows.map((r) => (
               <tr key={r[0]}>
                 {r.map((c, i) => (
-                  <td key={i}>{c}</td>
+                  <td key={i} dir="ltr">
+                    {c}
+                  </td>
                 ))}
               </tr>
             ))}
           </tbody>
         </table>
       </div>
-      <h2>Aprons</h2>
+      <h2>{t("size.aprons")}</h2>
       <p>
-        <strong>Regular</strong> fits most people up to 180 cm and falls just above the knee.{" "}
-        <strong>Long</strong> is recommended above 180 cm or if you prefer below-the-knee coverage. All neck straps and
-        ties are adjustable.
+        <strong>{t("size.regular")}</strong> {t("size.regularText")} <strong>{t("size.long")}</strong>{" "}
+        {t("size.longText")}
       </p>
     </section>
   );

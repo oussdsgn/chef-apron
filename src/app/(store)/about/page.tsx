@@ -2,12 +2,17 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { Features, RichText } from "@/components/Sections";
+import { getT } from "@/lib/i18n/server";
 import { getSettings } from "@/lib/store";
 
-export const metadata: Metadata = { title: "About us" };
+export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await getT();
+  return { title: t("footer.about") };
+}
 
 export default async function AboutPage() {
-  const settings = await getSettings();
+  const { locale, t } = await getT();
+  const settings = await getSettings(locale);
   const { about } = settings;
   return (
     <>
@@ -18,7 +23,7 @@ export default async function AboutPage() {
             <h1>{about.title}</h1>
             <RichText text={about.body} />
             <Link href="/products" className="btn btn--dark">
-              Shop the collection
+              {t("about.shop")}
             </Link>
           </div>
           {about.image && (
@@ -40,7 +45,7 @@ export default async function AboutPage() {
           </div>
         </section>
       )}
-      <Features settings={settings} />
+      <Features settings={settings} locale={locale} />
     </>
   );
 }

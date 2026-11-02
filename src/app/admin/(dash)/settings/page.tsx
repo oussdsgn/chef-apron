@@ -47,7 +47,12 @@ export default async function SettingsPage() {
     <>
       <PageHead title="Settings" subtitle="Store details, delivery fees and who can access this dashboard." />
       {settingsGroups.map((g) => (
-        <SettingsForm key={g.section} group={g} values={settings[g.section] as Record<string, unknown>} />
+        <SettingsForm
+          key={g.section}
+          group={g}
+          values={settings[g.section] as Record<string, unknown>}
+          translations={settings.translations}
+        />
       ))}
 
       <section className="panel" id="admins">

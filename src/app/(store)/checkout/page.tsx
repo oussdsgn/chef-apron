@@ -6,14 +6,14 @@ import { useState } from "react";
 import { useCart } from "@/components/CartProvider";
 import ProductImage from "@/components/ProductImage";
 import { useStore } from "@/components/StoreProvider";
-import { formatPrice, shippingFor } from "@/lib/format";
+import { shippingFor } from "@/lib/format";
 import { normalizePhone, wilayas } from "@/lib/wilayas";
 
 type Errors = Partial<Record<"name" | "phone" | "wilaya" | "commune" | "address", string>>;
 
 export default function CheckoutPage() {
   const { lines, subtotal, clear } = useCart();
-  const { getProduct, settings } = useStore();
+  const { getProduct, settings, t, price, locale } = useStore();
   const router = useRouter();
   const [wilaya, setWilaya] = useState("");
   const [errors, setErrors] = useState<Errors>({});
@@ -36,14 +36,14 @@ export default function CheckoutPage() {
     };
 
     const errs: Errors = {};
-    if (customer.name.trim().length < 2) errs.name = "Please enter your full name.";
-    if (!normalizePhone(customer.phone)) errs.phone = "Enter a valid phone number, e.g. 0555 12 34 56.";
-    if (!customer.wilaya) errs.wilaya = "Please choose your wilaya.";
-    if (customer.commune.trim().length < 2) errs.commune = "Please enter your commune.";
-    if (customer.address.trim().length < 5) errs.address = "Please enter your delivery address.";
+    if (customer.name.trim().length < 2) errs.name = t("checkout.err.name");
+    if (!normalizePhone(customer.phone)) errs.phone = t("checkout.err.phone");
+    if (!customer.wilaya) errs.wilaya = t("checkout.err.wilaya");
+    if (customer.commune.trim().length < 2) errs.commune = t("checkout.err.commune");
+    if (customer.address.trim().length < 5) errs.address = t("checkout.err.address");
     setErrors(errs);
     if (Object.keys(errs).length) {
-      setMessage("Please check the highlighted fields.");
+      setMessage(t("checkout.err.check"));
       return;
     }
 
@@ -61,10 +61,21 @@ export default function CheckoutPage() {
         router.push(`/checkout/success?order=${encodeURIComponent(data.orderId)}`);
         return;
       }
-      if (data.fieldErrors) setErrors(data.fieldErrors);
-      setMessage(data.error ?? "Something went wrong. Please try again.");
+      // Show the server's verdict in the visitor's language.
+      if (data.fieldErrors) {
+        const translated: Errors = {};
+        for (const k of Object.keys(data.fieldErrors) as (keyof Errors)[]) translated[k] = t(`checkout.err.${k}`);
+        setErrors(translated);
+      }
+      setMessage(
+        res.status === 409
+          ? t("checkout.err.stock")
+          : data.fieldErrors
+            ? t("checkout.err.check")
+            : t("checkout.err.generic"),
+      );
     } catch {
-      setMessage("Could not send your order. Check your connection and try again.");
+      setMessage(t("checkout.err.network"));
     }
     setSubmitting(false);
   }
@@ -73,10 +84,10 @@ export default function CheckoutPage() {
     return (
       <section className="container section">
         <div className="empty">
-          <h1>Checkout</h1>
-          <p>Your cart is empty.</p>
+          <h1>{t("checkout.title")}</h1>
+          <p>{t("cart.empty")}</p>
           <Link href="/products" className="btn btn--dark">
-            Shop collection
+            {t("cart.shopCollection")}
           </Link>
         </div>
       </section>
@@ -97,8 +108,8 @@ export default function CheckoutPage() {
   return (
     <section className="container section section--tight">
       <div className="page-head">
-        <h1>Checkout</h1>
-        <p>Pay cash on delivery. We&apos;ll call you to confirm your order before shipping.</p>
+        <h1>{t("checkout.title")}</h1>
+        <p>{t("checkout.intro")}</p>
       </div>
 
       <div className="cart-page">
@@ -111,20 +122,21 @@ export default function CheckoutPage() {
           }}
           noValidate
         >
-          <h2>Delivery details</h2>
+          <h2>{t("checkout.details")}</h2>
           <label>
-            Full name *
+            {t("checkout.name")} *
             <input name="name" autoComplete="name" required {...field("name")} />
             {err("name")}
           </label>
           <label>
-            Phone number *
+            {t("checkout.phone")} *
             <input
               name="phone"
               type="tel"
               inputMode="tel"
               autoComplete="tel"
               placeholder="05 55 12 34 56"
+              dir="ltr"
               required
               {...field("phone")}
             />
@@ -132,47 +144,47 @@ export default function CheckoutPage() {
           </label>
           <div className="form-row">
             <label>
-              Wilaya *
+              {t("checkout.wilaya")} *
               <select name="wilaya" required value={wilaya} onChange={(e) => setWilaya(e.target.value)} {...field("wilaya")}>
                 <option value="" disabled>
-                  Choose…
+                  {t("checkout.choose")}
                 </option>
                 {wilayas.map((w) => (
                   <option key={w.code} value={w.code}>
-                    {String(w.code).padStart(2, "0")} - {w.name}
+                    {String(w.code).padStart(2, "0")} - {locale === "ar" ? w.nameAr : w.name}
                   </option>
                 ))}
               </select>
               {err("wilaya")}
             </label>
             <label>
-              Commune *
+              {t("checkout.commune")} *
               <input name="commune" autoComplete="address-level2" required {...field("commune")} />
               {err("commune")}
             </label>
           </div>
           <label>
-            Address *
+            {t("checkout.address")} *
             <textarea
               name="address"
               rows={2}
               autoComplete="street-address"
-              placeholder="Street, building, floor…"
+              placeholder={t("checkout.addressPlaceholder")}
               required
               {...field("address")}
             />
             {err("address")}
           </label>
           <label>
-            Note for the delivery (optional)
-            <textarea name="note" rows={2} placeholder="Best time to call, landmark…" />
+            {t("checkout.note")}
+            <textarea name="note" rows={2} placeholder={t("checkout.notePlaceholder")} />
           </label>
 
           <div className="pay-method">
             <span className="pay-method__dot" aria-hidden />
             <div>
-              <strong>Cash on delivery</strong>
-              <p className="muted small">Pay the delivery agent when your order arrives.</p>
+              <strong>{t("checkout.cod")}</strong>
+              <p className="muted small">{t("checkout.codText")}</p>
             </div>
           </div>
 
@@ -182,12 +194,12 @@ export default function CheckoutPage() {
             </p>
           )}
           <button className="btn btn--dark btn--block" disabled={submitting}>
-            {submitting ? "Placing order…" : `Place order — ${formatPrice(total)}`}
+            {submitting ? t("checkout.placing") : t("checkout.place", { total: price(total) })}
           </button>
         </form>
 
         <aside className="summary">
-          <h2>Order summary</h2>
+          <h2>{t("cart.summary")}</h2>
           <ul className="summary__items">
             {lines.map((l) => {
               const p = getProduct(l.slug);
@@ -201,29 +213,37 @@ export default function CheckoutPage() {
                   <div className="summary__name">
                     {p.name}
                     <span className="muted small">
-                      {l.color}
-                      {l.size ? ` · ${l.size}` : ""}
+                      {p.colors.find((c) => c.name === l.color)?.label ?? l.color}
+                      {l.size ? ` · ${p.sizeLabels?.[l.size] ?? l.size}` : ""}
                     </span>
                   </div>
-                  <span>{formatPrice(p.price * l.quantity)}</span>
+                  <span>{price(p.price * l.quantity)}</span>
                 </li>
               );
             })}
           </ul>
           <div className="row-between">
-            <span>Subtotal</span>
-            <span>{formatPrice(subtotal)}</span>
+            <span>{t("cart.subtotal")}</span>
+            <span>{price(subtotal)}</span>
           </div>
           <div className="row-between">
-            <span>Delivery</span>
-            <span>{!wilaya && shipping > 0 ? "Choose wilaya" : shipping === 0 ? "Free" : formatPrice(shipping)}</span>
+            <span>{t("checkout.delivery")}</span>
+            <span>
+              {!wilaya && shipping > 0
+                ? t("checkout.chooseWilaya")
+                : shipping === 0
+                  ? t("checkout.free")
+                  : price(shipping)}
+            </span>
           </div>
           <div className="row-between summary__total">
-            <span>Total</span>
-            <strong>{formatPrice(total)}</strong>
+            <span>{t("checkout.total")}</span>
+            <strong>{price(total)}</strong>
           </div>
           {settings.shipping.freeThreshold > 0 && subtotal < settings.shipping.freeThreshold && (
-            <p className="muted small">Free delivery on orders over {formatPrice(settings.shipping.freeThreshold)}.</p>
+            <p className="muted small">
+              {t("checkout.freeOver", { amount: price(settings.shipping.freeThreshold) })}
+            </p>
           )}
         </aside>
       </div>

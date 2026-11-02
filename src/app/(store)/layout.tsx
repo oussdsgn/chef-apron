@@ -4,13 +4,15 @@ import CartDrawer from "@/components/CartDrawer";
 import Footer from "@/components/Footer";
 import Header from "@/components/Header";
 import { StoreProvider } from "@/components/StoreProvider";
+import { dirOf } from "@/lib/i18n/config";
+import { getLocale } from "@/lib/i18n/server";
 import { getCategories, getProducts, getSettings } from "@/lib/store";
 
-// Pages read from the database (cached), so they're rendered on request rather than at build time.
+// Pages read from the database (cached) and the visitor's language, so they're rendered on request.
 export const dynamic = "force-dynamic";
 
 export async function generateMetadata(): Promise<Metadata> {
-  const { store } = await getSettings();
+  const { store } = await getSettings(await getLocale());
   return {
     title: { default: `${store.name} — ${store.tagline}`, template: `%s | ${store.name}` },
     description: store.description,
@@ -19,15 +21,22 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function StoreLayout({ children }: { children: React.ReactNode }) {
-  const [products, categories, settings] = await Promise.all([getProducts(), getCategories(), getSettings()]);
+  const locale = await getLocale();
+  const [products, categories, settings] = await Promise.all([
+    getProducts(locale),
+    getCategories(locale),
+    getSettings(locale),
+  ]);
   return (
-    <StoreProvider products={products} categories={categories} settings={settings}>
-      <CartProvider>
-        <Header />
-        <main>{children}</main>
-        <Footer settings={settings} categories={categories} />
-        <CartDrawer />
-      </CartProvider>
-    </StoreProvider>
+    <div lang={locale} dir={dirOf(locale)} className="store-root">
+      <StoreProvider products={products} categories={categories} settings={settings} locale={locale}>
+        <CartProvider>
+          <Header />
+          <main>{children}</main>
+          <Footer settings={settings} categories={categories} locale={locale} />
+          <CartDrawer />
+        </CartProvider>
+      </StoreProvider>
+    </div>
   );
 }

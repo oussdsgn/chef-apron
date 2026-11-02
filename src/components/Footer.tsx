@@ -1,8 +1,19 @@
 import Link from "next/link";
+import type { Locale } from "@/lib/i18n/config";
+import { translator } from "@/lib/i18n/messages";
 import type { Category, Settings } from "@/lib/types";
 
-export default function Footer({ settings, categories }: { settings: Settings; categories: Category[] }) {
+export default function Footer({
+  settings,
+  categories,
+  locale,
+}: {
+  settings: Settings;
+  categories: Category[];
+  locale: Locale;
+}) {
   const { store } = settings;
+  const t = translator(locale);
   const social = [
     ["Instagram", store.instagram],
     ["TikTok", store.tiktok],
@@ -25,32 +36,36 @@ export default function Footer({ settings, categories }: { settings: Settings; c
           </div>
         </div>
         <div>
-          <h4>Shop</h4>
+          <h4>{t("footer.shop")}</h4>
           {categories.map((c) => (
             <Link key={c.slug} href={`/collections/${c.slug}`}>
               {c.name}
             </Link>
           ))}
-          <Link href="/products">All products</Link>
+          <Link href="/products">{t("footer.allProducts")}</Link>
         </div>
         <div>
-          <h4>Information</h4>
-          <Link href="/legal/shipping-policy">Shipping policy</Link>
-          <Link href="/legal/returns-refunds">Returns &amp; refunds</Link>
-          <Link href="/legal/privacy-policy">Privacy policy</Link>
-          <Link href="/size-guide">Size guide</Link>
+          <h4>{t("footer.information")}</h4>
+          <Link href="/legal/shipping-policy">{t("legal.shipping")}</Link>
+          <Link href="/legal/returns-refunds">{t("legal.returns")}</Link>
+          <Link href="/legal/privacy-policy">{t("legal.privacy")}</Link>
+          <Link href="/size-guide">{t("size.title")}</Link>
         </div>
         <div>
-          <h4>Company</h4>
-          <Link href="/about">About us</Link>
-          <Link href="/contact">Contact</Link>
+          <h4>{t("footer.company")}</h4>
+          <Link href="/about">{t("footer.about")}</Link>
+          <Link href="/contact">{t("nav.contact")}</Link>
           {store.email && <a href={`mailto:${store.email}`}>{store.email}</a>}
-          {store.phone && <a href={`tel:${store.phone.replace(/[^+\d]/g, "")}`}>{store.phone}</a>}
+          {store.phone && (
+            <a href={`tel:${store.phone.replace(/[^+\d]/g, "")}`} dir="ltr">
+              {store.phone}
+            </a>
+          )}
         </div>
       </div>
       <div className="container footer__bottom">
         <span>
-          © {new Date().getFullYear()} {store.name}. All rights reserved.
+          © {new Date().getFullYear()} {store.name}. {t("footer.rights")}
         </span>
       </div>
     </footer>

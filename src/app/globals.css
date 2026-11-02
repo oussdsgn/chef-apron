@@ -284,6 +284,22 @@ p {
 .wordmark--light {
   color: #fff;
 }
+.wordmark {
+  display: inline-flex;
+  align-items: center;
+}
+.logo {
+  display: block;
+  height: 26px;
+  width: auto;
+}
+.footer .logo {
+  height: 34px;
+}
+/* The logo is #2d2d2d; on the dark footer it is shown in white. */
+.logo--light {
+  filter: brightness(0) invert(1);
+}
 .cart-btn {
   position: relative;
 }

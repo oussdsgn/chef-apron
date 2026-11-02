@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import Logo from "@/components/Logo";
 
 const links = [
   { href: "/admin", label: "Overview", icon: "M4 13h6V4H4v9Zm0 7h6v-5H4v5Zm10 0h6v-9h-6v9Zm0-16v5h6V4h-6Z" },
@@ -32,7 +33,7 @@ export default function Sidebar({
     <aside className="sidebar">
       <div className="sidebar__brand">
         <Link href="/admin" className="wordmark">
-          APRON
+          <Logo />
         </Link>
         <span className="sidebar__tag">Dashboard</span>
       </div>

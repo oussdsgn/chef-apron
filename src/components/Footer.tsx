@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { Locale } from "@/lib/i18n/config";
 import { translator } from "@/lib/i18n/messages";
 import type { Category, Settings } from "@/lib/types";
+import Logo from "@/components/Logo";
 
 export default function Footer({
   settings,
@@ -24,7 +25,7 @@ export default function Footer({
       <div className="container footer__grid">
         <div className="footer__brand">
           <Link href="/" className="wordmark wordmark--light">
-            {store.name.toUpperCase()}
+            <Logo alt={store.name} light />
           </Link>
           <p>{store.tagline}</p>
           <div className="footer__social">

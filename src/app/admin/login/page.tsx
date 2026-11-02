@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { getAdmin } from "@/lib/auth";
 import GoogleButton from "./GoogleButton";
 import "../admin.css";
+import Logo from "@/components/Logo";
 
 export const metadata: Metadata = { title: "Sign in", robots: { index: false } };
 export const dynamic = "force-dynamic";
@@ -19,7 +20,7 @@ export default async function LoginPage() {
   return (
     <div className="login">
       <div className="login__card">
-        <span className="wordmark">APRON</span>
+        <span className="wordmark"><Logo /></span>
         <h1>Store dashboard</h1>
         <p className="muted">Sign in with your Google account to manage orders, products and content.</p>
         <GoogleButton />

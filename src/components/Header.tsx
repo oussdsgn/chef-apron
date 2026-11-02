@@ -7,6 +7,7 @@ import { useCart } from "./CartProvider";
 import { useStore } from "./StoreProvider";
 import { BagIcon, CloseIcon, MenuIcon, SearchIcon } from "./Icons";
 import LanguageSwitcher from "./LanguageSwitcher";
+import Logo from "@/components/Logo";
 
 
 export default function Header() {
@@ -55,7 +56,7 @@ export default function Header() {
         </button>
 
         <Link href="/" className="wordmark" aria-label={t("nav.home", { store: settings.store.name })}>
-          {settings.store.name.toUpperCase()}
+          <Logo alt={settings.store.name} />
         </Link>
 
         <div className="header__actions">

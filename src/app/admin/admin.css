@@ -59,6 +59,10 @@
 }
 .sidebar__brand .wordmark {
   font-size: 24px;
+  align-self: center;
+}
+.sidebar__brand .logo {
+  height: 22px;
 }
 .sidebar__tag {
   font-size: 11px;
@@ -1004,6 +1008,10 @@ select.input {
 }
 .login__card .wordmark {
   font-size: 30px;
+  justify-content: center;
+}
+.login__card .logo {
+  height: 34px;
 }
 .login__card h1 {
   font-size: 22px;

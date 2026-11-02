@@ -202,5 +202,8 @@ export function toOrder(doc: DocumentSnapshot): Order {
     shipping: d.shipping ?? 0,
     total: d.total ?? 0,
     adminNote: d.adminNote ?? "",
+    history: Array.isArray(d.history)
+      ? d.history.map((e: Record<string, unknown>) => ({ ...e, at: toIso(e.at), by: String(e.by ?? "") }) as Order["history"][number])
+      : [],
   };
 }

@@ -33,7 +33,7 @@ export function PageHead({
   );
 }
 
-const dateFmt = new Intl.DateTimeFormat("fr-DZ", {
+const dateFmt = new Intl.DateTimeFormat("en-GB", {
   day: "2-digit",
   month: "short",
   hour: "2-digit",

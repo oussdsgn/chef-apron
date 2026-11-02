@@ -117,6 +117,11 @@ export default async function OrdersPage({
                     <td className="num nowrap">{formatPrice(o.total)}</td>
                     <td>
                       <StatusPill status={o.status} />
+                      {o.status === "new" && o.history.some((e) => e.type === "no-answer") && (
+                        <span className="tries">
+                          No answer ×{o.history.filter((e) => e.type === "no-answer").length}
+                        </span>
+                      )}
                     </td>
                   </tr>
                 ))}

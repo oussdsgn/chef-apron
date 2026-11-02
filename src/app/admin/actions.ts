@@ -52,9 +52,27 @@ function refreshStore(...tags: string[]) {
 // ---------------- Orders ----------------
 
 export async function setOrderStatus(id: string, status: OrderStatus) {
-  await requireAdmin();
+  const admin = await requireAdmin();
   if (!safeId(id) || !ORDER_STATUSES.some((s) => s.value === status)) throw new Error("Invalid request");
-  await (await db()).collection(COL.orders).doc(id).update({ status, updatedAt: new Date() });
+  const { FieldValue } = await import("firebase-admin/firestore");
+  const at = new Date();
+  await (await db())
+    .collection(COL.orders)
+    .doc(id)
+    .update({ status, updatedAt: at, history: FieldValue.arrayUnion({ at, by: admin.email, type: "status", status }) });
+  revalidatePath("/admin", "layout");
+}
+
+/** Records a call the customer didn't pick up (the order stays "New"). */
+export async function logNoAnswer(id: string) {
+  const admin = await requireAdmin();
+  if (!safeId(id)) throw new Error("Invalid request");
+  const { FieldValue } = await import("firebase-admin/firestore");
+  const at = new Date();
+  await (await db())
+    .collection(COL.orders)
+    .doc(id)
+    .update({ updatedAt: at, history: FieldValue.arrayUnion({ at, by: admin.email, type: "no-answer" }) });
   revalidatePath("/admin", "layout");
 }
 

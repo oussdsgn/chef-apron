@@ -9,6 +9,8 @@ import { formatPrice } from "@/lib/format";
 import { toOrder } from "@/lib/store";
 import StatusButtons from "./StatusButtons";
 import PrintButton from "./PrintButton";
+import NextStep from "./NextStep";
+import { ORDER_STATUSES } from "@/lib/types";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -24,6 +26,10 @@ export default async function OrderPage({ params }: Params) {
   const o = toOrder(doc);
   const c = o.customer;
   const intl = c.phone.replace(/^0/, "213");
+  const noAnswers = o.history.filter((e) => e.type === "no-answer");
+  const lastTry = noAnswers.at(-1);
+  const activity = [...o.history].reverse();
+  const statusLabel = (s?: string) => ORDER_STATUSES.find((x) => x.value === s)?.label ?? s;
 
   return (
     <>
@@ -38,9 +44,18 @@ export default async function OrderPage({ params }: Params) {
         actions={<PrintButton />}
       />
 
+      <NextStep
+        id={o.id}
+        status={o.status}
+        total={formatPrice(o.total).replace(/ /g, "\u00a0")}
+        noAnswers={noAnswers.length}
+        lastTry={lastTry ? formatDate(lastTry.at) : undefined}
+      />
+
       <section className="panel no-print">
         <div className="panel__head">
           <h2>Status</h2>
+          <span className="muted small">Or set it directly</span>
         </div>
         <StatusButtons id={o.id} status={o.status} />
       </section>
@@ -134,6 +149,34 @@ export default async function OrderPage({ params }: Params) {
             placeholder="e.g. Called at 14:00, confirmed. Tracking number…"
           />
         </ActionForm>
+      </section>
+
+      <section className="panel no-print">
+        <div className="panel__head">
+          <h2>Activity</h2>
+        </div>
+        <ol className="activity">
+          {activity.map((e, n) => (
+            <li key={n} className={`activity__item activity__item--${e.type === "status" ? e.status : "no-answer"}`}>
+              <span>
+                {e.type === "no-answer" ? (
+                  "Called, no answer"
+                ) : (
+                  <>
+                    Marked as <strong>{statusLabel(e.status)}</strong>
+                  </>
+                )}
+              </span>
+              <span className="muted small">
+                {formatDate(e.at)} · {e.by}
+              </span>
+            </li>
+          ))}
+          <li className="activity__item">
+            <span>Order placed on the website</span>
+            <span className="muted small">{formatDate(o.createdAt)}</span>
+          </li>
+        </ol>
       </section>
 
       <div className="danger-zone no-print">

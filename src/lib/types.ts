@@ -71,6 +71,15 @@ export type OrderItem = {
   unitPrice: number;
 };
 
+/** One entry in an order's activity log. */
+export type OrderEvent = {
+  at: string;
+  /** Admin email. */
+  by: string;
+  type: "status" | "no-answer";
+  status?: OrderStatus;
+};
+
 export type Order = {
   id: string;
   createdAt: string;
@@ -89,6 +98,7 @@ export type Order = {
   shipping: number;
   total: number;
   adminNote: string;
+  history: OrderEvent[];
 };
 
 export type Settings = {

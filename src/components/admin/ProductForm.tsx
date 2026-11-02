@@ -143,7 +143,9 @@ export default function ProductForm({
                   <input
                     className="input"
                     value={c.name}
-                    placeholder="Color name"
+                    placeholder="Color name (required)"
+                    required
+                    maxLength={40}
                     onChange={(e) => updateColor(i, { name: e.target.value })}
                     aria-label={`Color ${i + 1} name`}
                   />

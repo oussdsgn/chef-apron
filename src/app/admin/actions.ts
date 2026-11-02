@@ -119,17 +119,24 @@ export async function saveProduct(_prev: ActionState, fd: FormData): Promise<Act
 
   let colors: ColorOption[] = [];
   try {
-    colors = (JSON.parse(str(fd, "colors", 20000) || "[]") as ColorOption[])
-      .map((c) => ({
-        name: String(c.name ?? "").trim().slice(0, 40),
-        hex: /^#[0-9a-f]{6}$/i.test(c.hex) ? c.hex : "#cccccc",
-        ...(c.image ? { image: String(c.image).slice(0, 1000) } : {}),
-      }))
-      .filter((c) => c.name);
+    colors = (JSON.parse(str(fd, "colors", 20000) || "[]") as ColorOption[]).map((c) => ({
+      name: String(c.name ?? "").trim().slice(0, 40),
+      hex: /^#[0-9a-f]{6}$/i.test(c.hex) ? c.hex : "#cccccc",
+      ...(c.image ? { image: String(c.image).slice(0, 1000) } : {}),
+    }));
   } catch {
     return { ok: false, message: "Colors could not be read." };
   }
   if (colors.length === 0) return { ok: false, message: "Add at least one color (e.g. “Default”)." };
+  // Never drop a color silently: every row needs its own name (orders and the cart refer to colors by name).
+  const unnamed = colors.findIndex((c) => !c.name);
+  if (unnamed !== -1) return { ok: false, message: `Color ${unnamed + 1} has no name. Give every color a name, or remove it.` };
+  const seen = new Set<string>();
+  for (const c of colors) {
+    const key = c.name.toLowerCase();
+    if (seen.has(key)) return { ok: false, message: `Two colors are called “${c.name}”. Each color needs a different name.` };
+    seen.add(key);
+  }
 
   const details = str(fd, "details", 10000)
     .split("\n")

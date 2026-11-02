@@ -1,5 +1,4 @@
 import "server-only";
-import { Timestamp } from "firebase-admin/firestore";
 import { firestore } from "./firebase-admin";
 import { defaultSettings, seedCategories, seedProducts } from "./seed";
 
@@ -21,13 +20,13 @@ declare global {
 }
 
 async function seed() {
-  const db = firestore();
+  const db = await firestore();
   const marker = db.collection(COL.meta).doc("seed");
   if ((await marker.get()).exists) return;
   const batch = db.batch();
   // The marker is created in the same atomic batch: if another server instance seeded first,
   // create() fails and nothing is written twice. If anything fails, nothing is written at all.
-  batch.create(marker, { seededAt: Timestamp.now() });
+  batch.create(marker, { seededAt: new Date() });
   seedCategories.forEach((c, i) => {
     batch.set(db.collection(COL.categories).doc(c.slug), {
       name: c.name,
@@ -55,8 +54,8 @@ async function seed() {
       active: true,
       inStock: true,
       sort: i,
-      createdAt: Timestamp.now(),
-      updatedAt: Timestamp.now(),
+      createdAt: new Date(),
+      updatedAt: new Date(),
     });
   });
   batch.set(db.collection(COL.settings).doc("site"), defaultSettings);
@@ -83,7 +82,8 @@ export async function db() {
 }
 
 export function toIso(v: unknown): string {
-  if (v instanceof Timestamp) return v.toDate().toISOString();
+  // Firestore returns its own Timestamp type; checked by shape so this file doesn't load firebase-admin.
+  if (v && typeof (v as { toDate?: unknown }).toDate === "function") return (v as { toDate(): Date }).toDate().toISOString();
   if (v instanceof Date) return v.toISOString();
   return typeof v === "string" ? v : new Date(0).toISOString();
 }

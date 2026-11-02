@@ -25,7 +25,7 @@ export async function GET() {
 
   let database: string;
   try {
-    await firestore().collection("meta").doc("seed").get();
+    await (await firestore()).collection("meta").doc("seed").get();
     database = "ok";
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);

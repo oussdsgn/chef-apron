@@ -19,7 +19,7 @@ export async function saveImage(file: File): Promise<string> {
   const id = `${randomUUID()}.${ext}`;
   const data = Buffer.from(await file.arrayBuffer());
 
-  const bucket = storageBucket();
+  const bucket = await storageBucket();
   if (bucket) {
     const path = `uploads/${id}`;
     const token = randomUUID();

@@ -13,7 +13,8 @@ export async function POST(req: Request) {
   if (!idToken) return NextResponse.json({ error: "Missing token" }, { status: 400 });
 
   try {
-    const decoded = await adminAuth().verifyIdToken(idToken, true);
+    const auth = await adminAuth();
+    const decoded = await auth.verifyIdToken(idToken, true);
     // Only accept a fresh sign-in (within the last 5 minutes).
     if (Date.now() / 1000 - decoded.auth_time > 5 * 60) {
       return NextResponse.json({ error: "Please sign in again." }, { status: 401 });
@@ -25,7 +26,7 @@ export async function POST(req: Request) {
       );
     }
     const expiresIn = SESSION_DAYS * 24 * 60 * 60 * 1000;
-    const session = await adminAuth().createSessionCookie(idToken, { expiresIn });
+    const session = await auth.createSessionCookie(idToken, { expiresIn });
     const res = NextResponse.json({ ok: true });
     res.cookies.set(SESSION_COOKIE, session, {
       httpOnly: true,
@@ -46,7 +47,7 @@ export async function DELETE() {
   const admin = await getAdmin();
   if (admin) {
     try {
-      await adminAuth().revokeRefreshTokens(admin.uid);
+      await (await adminAuth()).revokeRefreshTokens(admin.uid);
     } catch {
       /* ignore */
     }

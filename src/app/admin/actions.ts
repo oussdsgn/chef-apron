@@ -1,6 +1,5 @@
 "use server";
 
-import { FieldValue, Timestamp } from "firebase-admin/firestore";
 import { revalidatePath, revalidateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import { ownerEmails, requireAdmin } from "@/lib/auth";
@@ -33,7 +32,7 @@ function refreshStore(...tags: string[]) {
 export async function setOrderStatus(id: string, status: OrderStatus) {
   await requireAdmin();
   if (!safeId(id) || !ORDER_STATUSES.some((s) => s.value === status)) throw new Error("Invalid request");
-  await (await db()).collection(COL.orders).doc(id).update({ status, updatedAt: Timestamp.now() });
+  await (await db()).collection(COL.orders).doc(id).update({ status, updatedAt: new Date() });
   revalidatePath("/admin", "layout");
 }
 
@@ -121,7 +120,7 @@ export async function saveProduct(_prev: ActionState, fd: FormData): Promise<Act
     active: fd.get("active") === "on",
     inStock: fd.get("inStock") === "on",
     sort,
-    updatedAt: Timestamp.now(),
+    updatedAt: new Date(),
   };
 
   let savedId = id;
@@ -130,7 +129,7 @@ export async function saveProduct(_prev: ActionState, fd: FormData): Promise<Act
     if (!(await ref.get()).exists) return { ok: false, message: "This product no longer exists." };
     await ref.set(values, { merge: true });
   } else {
-    savedId = (await products.add({ ...values, createdAt: Timestamp.now() })).id;
+    savedId = (await products.add({ ...values, createdAt: new Date() })).id;
   }
   refreshStore(CATALOG_TAG);
   revalidatePath("/admin", "layout");
@@ -151,7 +150,7 @@ export async function toggleProduct(id: string, field: keyof typeof TOGGLES) {
     const snap = await tx.get(ref);
     if (!snap.exists) return;
     const current = key === "isNew" ? Boolean(snap.get(key)) : snap.get(key) !== false;
-    tx.update(ref, { [key]: !current, updatedAt: Timestamp.now() });
+    tx.update(ref, { [key]: !current, updatedAt: new Date() });
   });
   refreshStore(CATALOG_TAG);
   revalidatePath("/admin", "layout");
@@ -178,8 +177,8 @@ export async function duplicateProduct(id: string) {
     slug: `${d.slug}-copy-${Math.random().toString(36).slice(2, 6)}`,
     name: `${d.name} (copy)`,
     active: false,
-    createdAt: Timestamp.now(),
-    updatedAt: Timestamp.now(),
+    createdAt: new Date(),
+    updatedAt: new Date(),
   });
   revalidatePath("/admin", "layout");
   redirect(`/admin/products/${copy.id}`);
@@ -301,7 +300,7 @@ export async function addAdmin(_prev: ActionState, fd: FormData): Promise<Action
   await (await db())
     .collection(COL.admins)
     .doc(emailId(email))
-    .set({ email, addedBy: me.email, addedAt: FieldValue.serverTimestamp() });
+    .set({ email, addedBy: me.email, addedAt: new Date() });
   revalidatePath("/admin/settings");
   return { ok: true, message: `${email} can now sign in` };
 }

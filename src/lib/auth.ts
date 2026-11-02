@@ -29,7 +29,7 @@ export async function getAdmin() {
   if (!cookie) return null;
   try {
     // true = also reject sessions revoked by signing out
-    const claims = await adminAuth().verifySessionCookie(cookie, true);
+    const claims = await (await adminAuth()).verifySessionCookie(cookie, true);
     const email = claims.email?.toLowerCase();
     if (!email || !claims.email_verified || !(await isAdminEmail(email))) return null;
     return {

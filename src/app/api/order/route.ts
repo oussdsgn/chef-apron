@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { Timestamp } from "firebase-admin/firestore";
 import { COL, db } from "@/lib/db";
 import { formatPrice, shippingFor } from "@/lib/format";
 import { getProducts, getSettings } from "@/lib/store";
@@ -87,7 +86,7 @@ export async function POST(req: Request) {
   // ---- Save the order (this is what the dashboard shows) ----
   try {
     await (await db()).collection(COL.orders).doc(orderId).create({
-      createdAt: Timestamp.now(),
+      createdAt: new Date(),
       status: "new",
       customer,
       items,

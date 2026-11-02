@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { Timestamp } from "firebase-admin/firestore";
 import { PageHead, StatusPill, formatDate } from "@/components/admin/ui";
 import { COL, db } from "@/lib/db";
 import { formatPrice } from "@/lib/format";
@@ -12,7 +11,7 @@ export default async function OverviewPage() {
   const firestore = await db();
   const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
   const [monthSnap, newCount, recentSnap, products, subscribers] = await Promise.all([
-    firestore.collection(COL.orders).where("createdAt", ">=", Timestamp.fromDate(since)).get(),
+    firestore.collection(COL.orders).where("createdAt", ">=", since).get(),
     firestore.collection(COL.orders).where("status", "==", "new").count().get(),
     firestore.collection(COL.orders).orderBy("createdAt", "desc").limit(8).get(),
     listAllProducts(),

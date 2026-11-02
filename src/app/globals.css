@@ -296,7 +296,7 @@ p {
 .footer .logo {
   height: 34px;
 }
-/* The logo is #2d2d2d; on the dark footer it is shown in white. */
+/* The logo is #111111 (--ink); on the dark footer it is shown in white. */
 .logo--light {
   filter: brightness(0) invert(1);
 }
